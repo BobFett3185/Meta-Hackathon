@@ -3,3 +3,7 @@ node_modules/
 dist/
 npm-debug.log*
 .tools/
+
+.env
+.env.*
+!.env.example
