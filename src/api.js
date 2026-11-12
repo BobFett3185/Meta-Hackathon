@@ -4,6 +4,20 @@ import { supabase } from './supabase';
 // The mock "logged-in" user. Looked up by name so no UUID is hardcoded.
 export const ME_NAME = 'Dhweya Modi';
 
+const FALLBACK_ME = {
+  id: 'offline-me', name: 'Swayam Arora', avatar_url: 'https://i.pravatar.cc/150?img=12',
+  cover_url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
+  location: 'Seattle, Washington', birthday: '2006-03-03',
+};
+const FALLBACK_POSTS = [{
+  id: 'offline-post', title: '1-Bedroom Apartment Sublet in South Lake Union',
+  body: 'Hi everyone! I’m looking to sublet my beautiful apartment in South Lake Union. Message me for details.',
+  created_at: new Date().toISOString(), author: FALLBACK_ME,
+  group: { id: 'offline-group', name: 'Seattle Apartments and Housing' },
+  images: ['https://media.equityapartments.com/images/c_crop%2Cx_0%2Cy_0%2Cw_1920%2Ch_1080/c_fill%2Cw_1920%2Ch_1080/q_80/4216-137/helios-apartments-living-room.jpg'],
+  reaction_count: 42, comment_count: 18, share_count: 3, liked: false,
+}];
+
 const ok = ({ data, error }) => {
   if (error) throw new Error(error.message);
   return data;
@@ -11,7 +25,7 @@ const ok = ({ data, error }) => {
 
 let mePromise;
 export const getMe = () =>
-  (mePromise ||= supabase.from('fb_users').select('*').eq('name', ME_NAME).single().then(ok));
+  (mePromise ||= supabase.from('fb_users').select('*').eq('name', ME_NAME).single().then(ok).catch(() => FALLBACK_ME));
 
 // ---- feed ---------------------------------------------------------------
 const POST_SELECT =
@@ -38,16 +52,20 @@ async function decoratePosts(posts) {
 }
 
 export async function getFeed(limit = 20) {
-  const posts = await supabase
-    .from('fb_posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(limit).then(ok);
-  return decoratePosts(posts);
+  try {
+    const posts = await supabase
+      .from('fb_posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(limit).then(ok);
+    return decoratePosts(posts);
+  } catch { return FALLBACK_POSTS; }
 }
 
 export async function getGroupPosts(groupIds, limit = 10) {
-  const posts = await supabase
-    .from('fb_posts').select(POST_SELECT).in('group_id', groupIds)
-    .order('created_at', { ascending: false }).limit(limit).then(ok);
-  return decoratePosts(posts);
+  try {
+    const posts = await supabase
+      .from('fb_posts').select(POST_SELECT).in('group_id', groupIds)
+      .order('created_at', { ascending: false }).limit(limit).then(ok);
+    return decoratePosts(posts);
+  } catch { return FALLBACK_POSTS; }
 }
 
 export async function getMyPosts(limit = 10) {
@@ -70,7 +88,7 @@ export async function setLike(postId, liked) {
 export const getStories = () =>
   supabase.from('fb_stories').select('*, author:fb_users(name,avatar_url)')
     .gt('expires_at', new Date(0).toISOString()) // mock data: don't hide "expired" stories
-    .order('created_at', { ascending: false }).then(ok);
+    .order('created_at', { ascending: false }).then(ok).catch(() => []);
 
 // ---- groups -------------------------------------------------------------
 export async function getMyGroups() {
@@ -102,9 +120,10 @@ export const getListings = () =>
   supabase.from('fb_marketplace_listings')
     .select('*, images:fb_marketplace_images(url,position)')
     .eq('status', 'available').order('created_at', { ascending: false }).limit(30).then(ok)
-    .then((rows) => rows.map((l) => ({ ...l, image: l.images?.sort((a, b) => a.position - b.position)[0]?.url })));
+    .then((rows) => rows.map((l) => ({ ...l, image: l.images?.sort((a, b) => a.position - b.position)[0]?.url }))).catch(() => []);
 
 export async function getThreads() {
+  try {
   const me = await getMe();
   const rows = await supabase.from('fb_marketplace_threads').select(
     'id, listing:fb_marketplace_listings(title, seller:fb_users(name), images:fb_marketplace_images(url)),' +
@@ -124,14 +143,17 @@ export async function getThreads() {
       };
     })
     .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  } catch { return []; }
 }
 
 // ---- notifications / profile / reels -----------------------------------
 export async function getNotifications() {
-  const me = await getMe();
-  return supabase.from('fb_notifications')
-    .select('*, actor:fb_users!actor_id(name,avatar_url)')
-    .eq('user_id', me.id).order('created_at', { ascending: false }).then(ok);
+  try {
+    const me = await getMe();
+    return await supabase.from('fb_notifications')
+      .select('*, actor:fb_users!actor_id(name,avatar_url)')
+      .eq('user_id', me.id).order('created_at', { ascending: false }).then(ok);
+  } catch { return []; }
 }
 
 export async function getFriends() {
@@ -152,4 +174,4 @@ export async function getFriends() {
 
 export const getReel = () =>
   supabase.from('fb_reels').select('*, author:fb_users(name)')
-    .order('created_at', { ascending: false }).limit(1).then(ok).then((r) => r[0] || null);
+    .order('created_at', { ascending: false }).limit(1).then(ok).then((r) => r[0] || null).catch(() => null);

@@ -245,7 +245,17 @@ export default function App(){
   })).current;
   const selectMenu=(label)=>{const routes={Marketplace:'market',Groups:'groups',Reels:'reels',Profile:'profile',Friends:'groups',Feeds:'home'}; setMenuOpen(false); setInbox(false); if(routes[label]){setFeature(null);setTab(routes[label]);}else{setFeature(label);}};
   let content=feature?<FeaturePage title={feature} onBack={()=>setFeature(null)}/>:inbox?<Inbox onBack={()=>setInbox(false)}/>:tab==='home'?<Home openMenu={()=>setMenuOpen(true)}/>:tab==='market'?<Marketplace openInbox={()=>setInbox(true)}/>:tab==='groups'?<Groups/>:tab==='notify'?<Notifications/>:tab==='profile'?<Profile/>:<Reels/>;
-  return <SafeAreaView style={s.safe}><StatusBar barStyle={tab==='reels'&&!feature?'light-content':'dark-content'}/><View style={s.app}>{content}{tab==='home'&&!inbox&&!feature&&!menuOpen&&<View style={s.edgeSwipe} {...edgeSwipe.panHandlers}/>} {!inbox&&!feature&&<Nav tab={tab} setTab={x=>{setTab(x);setInbox(false);setFeature(null)}}/>}<MenuDrawer visible={menuOpen} onClose={()=>setMenuOpen(false)} onSelect={selectMenu}/></View></SafeAreaView>
+  return (
+    <SafeAreaView style={s.safe}>
+      <StatusBar barStyle={tab==='reels'&&!feature?'light-content':'dark-content'}/>
+      <View style={s.app}>
+        {content}
+        {tab==='home'&&!inbox&&!feature&&!menuOpen&&<View style={s.edgeSwipe} {...edgeSwipe.panHandlers}/>}
+        {!inbox&&!feature&&<Nav tab={tab} setTab={x=>{setTab(x);setInbox(false);setFeature(null)}}/>}
+        <MenuDrawer visible={menuOpen} onClose={()=>setMenuOpen(false)} onSelect={selectMenu}/>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const x=StyleSheet.create({
