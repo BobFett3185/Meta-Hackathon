@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, Modal } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SafeAreaView, View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import * as api from './src/api';
 
 const BLUE = '#0866ff';
 const W = Dimensions.get('window').width;
-const apartment = 'https://media.equityapartments.com/images/c_crop%2Cx_0%2Cy_0%2Cw_1920%2Ch_1080/c_fill%2Cw_1920%2Ch_1080/q_80/4216-137/helios-apartments-living-room.jpg';
-const apartment2 = 'https://ssl.cdn-redfin.com/photo/rent/e2bd720e-c007-412d-be53-b63520ecabcf/islphoto/genIsl.1_2.jpg';
-const apartment3 = 'https://ovationseattle.com/assets/images/cache/Ovation-45-0311420ef38a750898213da0f544a477.jpg';
-const avatars = [
-  'https://i.pravatar.cc/150?img=12','https://i.pravatar.cc/150?img=47','https://i.pravatar.cc/150?img=32','https://i.pravatar.cc/150?img=5','https://i.pravatar.cc/150?img=49','https://i.pravatar.cc/150?img=16'
-];
-const products = [apartment, 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800', 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800', 'https://images.unsplash.com/photo-1615065820499-57d11d2b607c?w=800', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800', 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800'];
+const BLANK = 'https://i.pravatar.cc/150?img=12';
 
+// ---- helpers --------------------------------------------------------------
+const timeAgo = (iso) => {
+  const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (m < 60) return `${m}m`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.round(h / 24);
+  return d < 7 ? `${d}d` : `${Math.round(d / 7)}w`;
+};
+const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const money = (n) => (n == null || Number(n) === 0 ? 'Free' : `$${Number(n)}`);
+const compact = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : `${n}`);
+
+// Loads data on mount / when deps change. `reload` refetches without a spinner flash.
+function useData(fn, deps = []) {
+  const [state, setState] = useState({ data: null, error: null, loading: true });
+  const load = useCallback(() => {
+    let live = true;
+    fn().then((data) => live && setState({ data, error: null, loading: false }))
+      .catch((error) => live && setState({ data: null, error, loading: false }));
+    return () => { live = false; };
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [load]);
+  return { ...state, reload: load };
+}
+
+// Shows a spinner / error, otherwise renders children(data).
+const Loaded = ({ q, children }) => {
+  if (q.loading) return <ActivityIndicator style={{ margin: 40 }} color={BLUE} />;
+  if (q.error) return <Text style={x.error}>Couldn’t load data.{`\n`}{q.error.message}</Text>;
+  return children(q.data);
+};
+
+// ---- shared UI ------------------------------------------------------------
 const IconButton = ({ name, family='ion', onPress, badge }) => (
   <Pressable onPress={onPress} style={({pressed})=>[s.iconBtn, pressed&&s.pressed]}>
-    {family==='feather'?<Feather name={name} size={24}/>:<Ionicons name={name} size={25}/>} 
-    {badge && <View style={s.badge}><Text style={s.badgeText}>{badge}</Text></View>}
+    {family==='feather'?<Feather name={name} size={24}/>:<Ionicons name={name} size={25}/>}
+    {badge ? <View style={s.badge}><Text style={s.badgeText}>{badge}</Text></View> : null}
   </Pressable>
 );
 
@@ -31,53 +60,127 @@ const Nav = ({tab,setTab}) => {
   </Pressable>)}</View>
 };
 
+// ---- posts ----------------------------------------------------------------
+function Post({ post }) {
+  const [liked, setLiked] = useState(post.liked);
+  const [count, setCount] = useState(post.reaction_count);
+  const [expanded, setExpanded] = useState(false);
+  const long = post.body.length > 140;
+  const toggleLike = () => {
+    const next = !liked;
+    setLiked(next); setCount((c) => c + (next ? 1 : -1)); // optimistic
+    api.setLike(post.id, next).catch(() => { setLiked(!next); setCount((c) => c + (next ? -1 : 1)); });
+  };
+  return <View style={s.post}>
+    <View style={s.postHead}><Image source={{uri:post.author.avatar_url||BLANK}} style={s.avatar}/><View style={{flex:1}}><Text style={s.bold}>{post.group?.name || post.author.name}</Text><Text style={s.muted}>{post.group ? `${post.author.name} · ` : ''}{timeAgo(post.created_at)} · 🌐</Text></View><Ionicons name="ellipsis-horizontal" size={23}/><Ionicons name="close" size={26} color="#66717d"/></View>
+    {post.title ? <Text style={s.postTitle}>{post.title}</Text> : null}
+    <Text style={[s.body, !post.title && {paddingTop:10}]}>{long&&!expanded?post.body.slice(0,140)+'... ':post.body}{long&&!expanded&&<Text style={s.muted} onPress={()=>setExpanded(true)}>See more</Text>}</Text>
+    {post.images.length>0&&<View style={s.photoGrid}>{post.images.slice(0,2).map((u)=><Image key={u} source={{uri:u}} style={s.postPhoto}/>)}</View>}
+    <View style={s.actions}><Text>{count>0?`👍 ❤️  ${count}`:' '}</Text><Text style={s.muted}>{post.comment_count} comments · {post.share_count} shares</Text></View>
+    <View style={s.actionRow}>
+      <Pressable style={s.action} onPress={toggleLike}><Ionicons name={liked?'thumbs-up':'thumbs-up-outline'} size={20} color={liked?BLUE:'#111'}/><Text style={liked&&{color:BLUE,fontWeight:'600'}}>Like</Text></Pressable>
+      {[['chatbubble-outline','Comment'],['arrow-redo-outline','Share']].map(y=><View key={y[1]} style={s.action}><Ionicons name={y[0]} size={20}/><Text>{y[1]}</Text></View>)}
+    </View>
+  </View>;
+}
+
+const Posts = ({ q }) => <Loaded q={q}>{(posts) => posts.length ? posts.map((p) => <Post key={p.id} post={p}/>) : <Text style={x.empty}>Nothing here yet.</Text>}</Loaded>;
+
+// ---- screens --------------------------------------------------------------
 function Home({openMenu}){
+  const me = useData(api.getMe);
+  const stories = useData(api.getStories);
+  const feed = useData(() => api.getFeed(20));
   return <ScrollView showsVerticalScrollIndicator={false} style={s.page}>
     <Header logo title="facebook" onMenu={openMenu} right={<><IconButton name="add"/><IconButton name="search"/><IconButton name="chatbubble-ellipses" badge="4"/></>}/>
-    <View style={s.composer}><Image source={{uri:avatars[0]}} style={s.avatar}/><Text style={s.composerText}>What's on your mind?</Text><Ionicons name="images-outline" size={25} color="#59636e"/></View>
+    <View style={s.composer}><Image source={{uri:me.data?.avatar_url||BLANK}} style={s.avatar}/><Text style={s.composerText}>What's on your mind?</Text><Ionicons name="images-outline" size={25} color="#59636e"/></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.stories}>
-      <View style={s.story}><Image source={{uri:avatars[0]}} style={s.storyImage}/><View style={s.plus}><Ionicons name="add" size={28} color="white"/></View><Text style={s.createStory}>Create{`\n`}story</Text></View>
-      {[apartment2,apartment3,'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=500'].map((u,i)=><View style={s.story} key={u}><Image source={{uri:u}} style={s.storyFull}/><Image source={{uri:avatars[i+1]}} style={s.storyAvatar}/><Text style={s.storyName}>{['Divya Khurana','A. R. Rahman','Viren Shah'][i]}</Text></View>)}
+      <View style={s.story}><Image source={{uri:me.data?.avatar_url||BLANK}} style={s.storyImage}/><View style={s.plus}><Ionicons name="add" size={28} color="white"/></View><Text style={s.createStory}>Create{`\n`}story</Text></View>
+      {(stories.data||[]).map((st)=><View style={s.story} key={st.id}><Image source={{uri:st.image_url}} style={s.storyFull}/><Image source={{uri:st.author.avatar_url}} style={s.storyAvatar}/><Text style={s.storyName}>{st.author.name}</Text></View>)}
     </ScrollView>
-    <Post/>
+    <Posts q={feed}/>
   </ScrollView>
 }
 
-function Post(){return <View style={s.post}>
-  <View style={s.postHead}><Image source={{uri:avatars[1]}} style={s.avatar}/><View style={{flex:1}}><Text style={s.bold}>Seattle Apartments and Housing</Text><Text style={s.muted}>Harriet Packpackpack · 3d · 🌐</Text></View><Ionicons name="ellipsis-horizontal" size={23}/><Ionicons name="close" size={26} color="#66717d"/></View>
-  <Text style={s.postTitle}>🏙️ 1-Bedroom Apartment Sublet in South Lake Union – December & January</Text>
-  <Text style={s.body}>Hi everyone! I’m looking to sublet my beautiful 1-bedroom apartment in South Lake Union... <Text style={s.muted}>See more</Text></Text>
-  <View style={s.photoGrid}><Image source={{uri:apartment2}} style={s.postPhoto}/><Image source={{uri:apartment}} style={s.postPhoto}/></View>
-  <View style={s.actions}><Text>👍 ❤️  42</Text><Text style={s.muted}>18 comments · 3 shares</Text></View>
-  <View style={s.actionRow}>{[['thumbs-up-outline','Like'],['chatbubble-outline','Comment'],['arrow-redo-outline','Share']].map(x=><View key={x[1]} style={s.action}><Ionicons name={x[0]} size={20}/><Text>{x[1]}</Text></View>)}</View>
-  </View>}
-
-function Marketplace({openInbox}){return <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
-  <Header title="Marketplace" right={<><IconButton name="chatbubble-ellipses" onPress={openInbox} badge="6"/><IconButton name="search"/><IconButton name="ellipsis-horizontal-circle"/></>}/>
-  <View style={s.chips}>{['Sell','Explore','Local','More⌄'].map((x,i)=><Text key={x} style={[s.chip,i===1&&s.chipOn]}>{x}</Text>)}<Ionicons name="location" size={22}/></View>
-  <View style={s.productGrid}>{products.map((u,i)=><Pressable key={u} style={s.product}><Image source={{uri:u}} style={s.productImg}/><Text numberOfLines={1} style={s.productText}>{['$20 · Moving Sale · Everything must go','$50 · Small shoe cabinet','$10 · Lululemon, reformation bundle','$50 · JOOLA Pickleball Paddle','$30 · Metal bed frame','$18 · Paper floor lamp'][i]}</Text></Pressable>)}</View>
+function Marketplace({openInbox}){
+  const listings = useData(api.getListings);
+  const threads = useData(api.getThreads);
+  const unread = (threads.data||[]).filter((t)=>t.unread).length;
+  return <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
+    <Header title="Marketplace" right={<><IconButton name="chatbubble-ellipses" onPress={openInbox} badge={unread||null}/><IconButton name="search"/><IconButton name="ellipsis-horizontal-circle"/></>}/>
+    <View style={s.chips}>{['Sell','Explore','Local','More⌄'].map((t,i)=><Text key={t} style={[s.chip,i===1&&s.chipOn]}>{t}</Text>)}<Ionicons name="location" size={22}/></View>
+    <Loaded q={listings}>{(rows)=><View style={s.productGrid}>{rows.map((l)=><Pressable key={l.id} style={s.product}><Image source={{uri:l.image}} style={s.productImg}/><Text numberOfLines={1} style={s.productText}>{money(l.price)} · {l.title}</Text></Pressable>)}</View>}</Loaded>
   </ScrollView>}
 
-const threads=[['Jdan · Pack bundle with 2 pickle balls','Jdan marked the listing as sold.','Jun 11'],['Nathan · Holbrook Pickleball Racket','Nathan is waiting for your response...','Jun 9'],['Rongru · MTEN Pickleball Paddle Set...','2 new messages','Jun 8'],['Kerry · Luzz pickleball paddle','Kerry is waiting for your response...','Jun 5'],['Sa · Carbon fiber pickleball paddle','Sa: $25','Jun 5']];
-function Inbox({onBack}){return <View style={s.page}><Header back onBack={onBack} title="Marketplace"/>
-  <View style={s.notice}><Ionicons name="notifications-off" color={BLUE} size={23}/><View style={{flex:1}}><Text>Notifications are off</Text><Text style={s.small}>Turn on notifications so you never miss a message. <Text style={{color:BLUE}}>Manage settings</Text></Text></View><Ionicons name="close-circle" size={23} color="#68717a"/></View>
-  {threads.map((x,i)=><Pressable key={x[0]} style={s.thread}><Image source={{uri:products[i+1]}} style={s.threadImg}/><View style={{flex:1}}><Text style={s.threadTitle}>{x[0]}</Text><Text numberOfLines={1} style={s.threadSub}>{x[1]} <Text style={s.muted}> · {x[2]}</Text></Text></View><View style={s.dot}/></Pressable>)}
+function Inbox({onBack}){
+  const threads = useData(api.getThreads);
+  return <ScrollView style={s.page}><Header back onBack={onBack} title="Marketplace"/>
+    <View style={s.notice}><Ionicons name="notifications-off" color={BLUE} size={23}/><View style={{flex:1}}><Text>Notifications are off</Text><Text style={s.small}>Turn on notifications so you never miss a message. <Text style={{color:BLUE}}>Manage settings</Text></Text></View><Ionicons name="close-circle" size={23} color="#68717a"/></View>
+    <Loaded q={threads}>{(rows)=>rows.map((t)=><Pressable key={t.id} style={s.thread}><Image source={{uri:t.image}} style={s.threadImg}/><View style={{flex:1}}><Text style={s.threadTitle}>{t.title}</Text><Text numberOfLines={1} style={s.threadSub}>{t.last} <Text style={s.muted}> · {t.at?shortDate(t.at):''}</Text></Text></View>{t.unread&&<View style={s.dot}/>}</Pressable>)}</Loaded>
+  </ScrollView>}
+
+function Groups(){
+  const [sub,setSub]=useState('For you');
+  const mine = useData(api.getMyGroups);
+  const groupPosts = useData(async () => {
+    const g = await api.getMyGroups();
+    return api.getGroupPosts(g.map((x) => x.id), 5);
+  });
+  return <ScrollView style={s.page} showsVerticalScrollIndicator={false}><Header title="Groups" right={<><IconButton name="add-circle-outline"/><IconButton name="search"/><IconButton name="ellipsis-horizontal-circle"/></>}/>
+    <View style={s.subnav}>{['For you','Your groups','Your activity','Discover'].map(t=><Pressable key={t} onPress={()=>setSub(t)}><Text style={[s.subtab,sub===t&&s.subOn]}>{t}</Text></Pressable>)}</View>
+    {sub==='Discover'?<Discover/>:sub==='Your activity'?<Activity groupPosts={groupPosts}/>:<>
+      <View style={s.sectionTitle}><Text style={s.bold}>Your groups</Text><Text style={{color:BLUE}}>See all</Text></View>
+      <Loaded q={mine}>{(rows)=>rows.map((g)=><View key={g.id} style={s.groupRow}><Image source={{uri:g.cover_url}} style={s.groupImg}/><View style={{flex:1}}><Text numberOfLines={1} style={s.groupName}>{g.name}</Text><Text style={s.small}>🔵 {g.privacy==='private'?'Private group':'Public group'}</Text></View><Ionicons name={g.pinned?'pin':'pin-outline'} size={21} color={g.pinned?BLUE:'#68717a'}/></View>)}</Loaded>
+      <Text style={[s.bold,{padding:10,fontSize:18}]}>Recent in your groups</Text><Posts q={groupPosts}/></>}
+  </ScrollView>}
+
+function Activity({groupPosts}){return <View><View style={s.filterRow}>{['All','Tagged','Commented','Authored'].map((t,i)=><Text key={t} style={[s.filter,i===0&&s.filterOn]}>{t}</Text>)}</View>
+  <Loaded q={groupPosts}>{(posts)=><View style={s.activityGrid}>{posts.map((p)=><View key={p.id} style={s.activityCard}><Text numberOfLines={1} style={s.smallBold}>{p.group?.name}</Text><Text numberOfLines={7} style={s.small}>{p.title?`${p.title}\n`:''}{p.body}</Text><Text style={{textAlign:'right'}}>♡ {p.reaction_count}</Text></View>)}</View>}</Loaded></View>}
+
+function Discover(){
+  const sug = useData(api.getSuggestedGroups);
+  const [joined,setJoined]=useState({});
+  const join=(g)=>{setJoined((j)=>({...j,[g.id]:true})); api.joinGroup(g.id).catch(()=>setJoined((j)=>({...j,[g.id]:false})));};
+  return <View><Text style={[s.bold,{padding:10,fontSize:18}]}>Suggested for you</Text>
+    <Loaded q={sug}>{(rows)=><View style={s.suggestGrid}>{rows.map((g)=><View key={g.id} style={s.suggest}><Image source={{uri:g.cover_url}} style={s.suggestImg}/><Text numberOfLines={1} style={s.bold}>{g.name}</Text><Text style={s.small}>{g.privacy==='private'?'Private':'Public'} group · {compact(g.member_count)} members</Text><Pressable style={[s.join,joined[g.id]&&x.joined]} onPress={()=>!joined[g.id]&&join(g)}><Text style={{color:joined[g.id]?'#111':'white',fontWeight:'600'}}>{joined[g.id]?'Joined':'Join'}</Text></Pressable></View>)}</View>}</Loaded></View>}
+
+function Notifications(){
+  const notes = useData(api.getNotifications);
+  return <View style={s.page}><Header title="Notifications" right={<><IconButton name="ellipsis-horizontal-circle"/><IconButton name="search"/><IconButton name="chatbubble-ellipses"/></>}/><Text style={[s.bold,{paddingHorizontal:10}]}>New</Text>
+    <ScrollView><Loaded q={notes}>{(rows)=>rows.map((n)=><View key={n.id} style={s.note}><Image source={{uri:n.actor?.avatar_url||BLANK}} style={s.noteAvatar}/><Text style={s.noteText}>{n.message} <Text style={s.muted}> · {timeAgo(n.created_at)}</Text></Text><Ionicons name="ellipsis-horizontal" size={21}/></View>)}</Loaded></ScrollView>
+    <View style={s.push}><Ionicons name="close"/><Text style={[s.small,{flex:1}]}>Your push notifications are off. Turn them on to stay connected.</Text><Text style={s.turnOn}>Turn on</Text></View></View>}
+
+function Profile(){
+  const me = useData(api.getMe);
+  const friends = useData(api.getFriends);
+  const posts = useData(() => api.getMyPosts(5));
+  return <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
+    <Loaded q={me}>{(u)=><>
+      <View style={s.cover}>{u.cover_url&&<Image source={{uri:u.cover_url}} style={s.coverImg}/>}<View style={s.profileTools}><Ionicons name="menu" size={25} color="white"/><View style={{flex:1}}/><Ionicons name="pencil" size={22} color="white"/><Ionicons name="search" size={24} color="white"/></View><Image source={{uri:u.avatar_url||BLANK}} style={s.profilePic}/></View>
+      <Text style={s.profileName}>{u.name}</Text><Text style={s.center}>{friends.data?`${friends.data.length} friends`:' '}</Text>
+      <View style={s.profileBtns}><Text style={s.blueBtn}>⊕ Add to story</Text><Text style={s.grayBtn}>✎ Edit profile</Text></View>
+      <View style={s.profileTabs}>{['All','Photos','Reels','Memories'].map((t,i)=><Text key={t} style={[s.profileTab,i===0&&s.filterOn]}>{t}</Text>)}</View>
+      <View style={s.sectionTitle}><Text style={s.bold}>At a glance</Text><Text style={{color:BLUE}}>See all</Text></View>
+      {u.location&&<Text style={s.detail}>⌾  Lives in {u.location}</Text>}
+      {u.birthday&&<Text style={s.detail}>♧  Born {new Date(u.birthday+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</Text>}
+    </>}</Loaded>
+    <View style={s.sectionTitle}><Text style={s.bold}>Friends</Text><Text style={{color:BLUE}}>See all</Text></View>
+    <View style={s.friendRow}>{(friends.data||[]).slice(0,4).map((f)=><View style={s.friend} key={f.id}><Image source={{uri:f.avatar_url}} style={s.friendImg}/><Text style={s.center}>{f.name}</Text><Text style={[s.small,s.center]}>{f.mutual} mutual friends</Text></View>)}</View>
+    <Posts q={posts}/>
+  </ScrollView>}
+
+function Reels(){
+  const reel = useData(api.getReel);
+  const r = reel.data;
+  return <View style={[s.page,{backgroundColor:'#111'}]}>
+    {reel.loading&&<ActivityIndicator style={{marginTop:200}} color="white"/>}
+    {r&&<>
+      <Image source={{uri:r.thumbnail_url}} style={s.reelBg}/>
+      <View style={s.reelText}><Text style={s.reelCaption}>{r.location}</Text><Text style={{color:'white',fontWeight:'600'}}>{r.author.name}  •  Follow</Text><Text style={{color:'white'}}>{r.caption}</Text></View>
+      <View style={s.reelActions}>{[['thumbs-up',r.like_count],['chatbubble',r.comment_count],['arrow-redo',r.share_count],['bookmark',r.save_count]].map(([n,c])=><View key={n} style={{alignItems:'center'}}><Ionicons name={n} size={29} color="white"/><Text style={s.reelCount}>{compact(c)}</Text></View>)}</View>
+    </>}
+    <View style={s.reelTop}><Ionicons name="menu" size={27} color="white"/><Text style={s.reelTitle}>Reels</Text><View style={{flex:1}}/><Ionicons name="search" size={26} color="white"/><Ionicons name="ellipsis-horizontal-circle" size={25} color="white"/></View>
   </View>}
-
-const groupNames=['Vancouver housing Rentals','Vancouver Rentals & Roommates','Vancouver Rents & Roommates','Vancouver Rentals & Roommates 🔥 including all of the lower mainland','Vancouver Marketplace','Vancouver, BC Looking Housing, Apartment Room Rentals','UBC, Housing, Room Rentals, Sublet Roommate','UBC students looking for roommates, housing rental/sublet','UBC Roommates and Housing','UBC - Off campus housing'];
-function Groups(){const [sub,setSub]=useState('For you'); return <ScrollView style={s.page} showsVerticalScrollIndicator={false}><Header title="Groups" right={<><IconButton name="add-circle-outline"/><IconButton name="search"/><IconButton name="ellipsis-horizontal-circle"/></>}/>
- <View style={s.subnav}>{['For you','Your groups','Your activity','Discover'].map(x=><Pressable key={x} onPress={()=>setSub(x)}><Text style={[s.subtab,sub===x&&s.subOn]}>{x}</Text></Pressable>)}</View>
- {sub==='Discover'?<Discover/>:sub==='Your activity'?<Activity/>:<><View style={s.sectionTitle}><Text style={s.bold}>Your groups</Text><Text style={{color:BLUE}}>See all</Text></View>{groupNames.map((x,i)=><View key={x} style={s.groupRow}><Image source={{uri:products[i%products.length]}} style={s.groupImg}/><View style={{flex:1}}><Text numberOfLines={1} style={s.groupName}>{x}</Text><Text style={s.small}>🔵 25+ new posts</Text></View><Ionicons name="pin-outline" size={21} color="#68717a"/></View>)}<Text style={[s.bold,{padding:10,fontSize:18}]}>Recommended for you</Text><Post/></>}
- </ScrollView>}
-function Activity(){return <View><View style={s.filterRow}>{['All','Tagged','Commented','Authored'].map((x,i)=><Text key={x} style={[s.filter,i===0&&s.filterOn]}>{x}</Text>)}</View><View style={s.activityGrid}>{groupNames.slice(0,8).map((x,i)=><View key={x} style={s.activityCard}><Text numberOfLines={1} style={s.smallBold}>{x}</Text><Text numberOfLines={7} style={s.small}>Room Swap Request UBC Year-Round{`\n`}Hey! I’m looking to swap my Ponderosa unit for a Brock Tallwood/Exchange 4BR — message me if you’re interested!</Text><Text style={{textAlign:'right'}}>♡ 0</Text></View>)}</View></View>}
-function Discover(){return <View><Text style={[s.bold,{padding:10,fontSize:18}]}>Suggested for you</Text><View style={s.suggestGrid}>{products.map((u,i)=><View key={u} style={s.suggest}><Image source={{uri:u}} style={s.suggestImg}/><Text numberOfLines={1} style={s.bold}>{['Marketplace ✅','Seattle and PNW Open Castings','moms in their 20’s','VINTED FINDS','Seattle Queer Jobs','Seattle City Social'][i]}</Text><Text style={s.small}>Private group · {i+6}K members</Text><Pressable style={s.join}><Text style={{color:'white',fontWeight:'600'}}>Join</Text></Pressable></View>)}</View></View>}
-
-const notes=['Suggested post from Stabilized: “normalize throwing...”','You can now post and comment in Vancouver Rentals & Roomm...','You’re now using a Meta Account on Facebook.','Meta Accounts are coming to Facebook. You’ll be updated to yours soon.','Dipali Modi posted 2 photos.','Bethany Kankelborg added 5 photos.','Dhruvil Modi commented on Dipali Modi’s post.','Vancouver Marketplace: “I’m sharing my experience so other Coach buyers can be cautious.”'];
-function Notifications(){return <View style={s.page}><Header title="Notifications" right={<><IconButton name="ellipsis-horizontal-circle"/><IconButton name="search"/><IconButton name="chatbubble-ellipses"/></>}/><Text style={[s.bold,{paddingHorizontal:10}]}>New</Text><ScrollView>{notes.map((x,i)=><View key={x} style={s.note}><Image source={{uri:avatars[i%avatars.length]}} style={s.noteAvatar}/><Text style={s.noteText}>{x} <Text style={s.muted}> · {i+1}w</Text></Text><Ionicons name="ellipsis-horizontal" size={21}/></View>)}</ScrollView><View style={s.push}><Ionicons name="close"/><Text style={[s.small,{flex:1}]}>Your push notifications are off. Turn them on to stay connected.</Text><Text style={s.turnOn}>Turn on</Text></View></View>}
-
-function Profile(){return <ScrollView style={s.page} showsVerticalScrollIndicator={false}><View style={s.cover}><Image source={{uri:apartment3}} style={s.coverImg}/><View style={s.profileTools}><Ionicons name="menu" size={25} color="white"/><View style={{flex:1}}/><Ionicons name="pencil" size={22} color="white"/><Ionicons name="search" size={24} color="white"/></View><Image source={{uri:avatars[0]}} style={s.profilePic}/></View><Text style={s.profileName}>Dhweya Modi</Text><Text style={s.center}>17 friends</Text><View style={s.profileBtns}><Text style={s.blueBtn}>⊕ Add to story</Text><Text style={s.grayBtn}>✎ Edit profile</Text></View><View style={s.profileTabs}>{['All','Photos','Reels','Memories'].map((x,i)=><Text key={x} style={[s.profileTab,i===0&&s.filterOn]}>{x}</Text>)}</View><View style={s.sectionTitle}><Text style={s.bold}>At a glance</Text><Text style={{color:BLUE}}>See all</Text></View><Text style={s.detail}>⌾  Lives in Seattle, Washington</Text><Text style={s.detail}>♧  Born March 3, 2006</Text><View style={s.sectionTitle}><Text style={s.bold}>Friends</Text><Text style={{color:BLUE}}>See all</Text></View><View style={s.friendRow}>{avatars.slice(1,5).map((u,i)=><View key={u} style={s.friend}><Image source={{uri:u}} style={s.friendImg}/><Text style={s.center}>{['Maitray Modi','Dipali Modi','Hiral Modi','Divya Singh'][i]}</Text><Text style={[s.small,s.center]}>{i+2} mutual friends</Text></View>)}</View><Post/></ScrollView>}
-
-function Reels(){return <View style={[s.page,{backgroundColor:'#111'}]}><Image source={{uri:'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=1000'}} style={s.reelBg}/><View style={s.reelTop}><Ionicons name="menu" size={27} color="white"/><Text style={s.reelTitle}>Reels</Text><View style={{flex:1}}/><Ionicons name="search" size={26} color="white"/><Ionicons name="ellipsis-horizontal-circle" size={25} color="white"/></View><View style={s.reelText}><Text style={s.reelCaption}>Seattle WA</Text><Text style={{color:'white',fontWeight:'600'}}>Corteezyy  •  Follow</Text><Text style={{color:'white'}}>Back to normal in the 206...</Text></View><View style={s.reelActions}>{['thumbs-up','chatbubble','arrow-redo','bookmark'].map((x,i)=><View key={x} style={{alignItems:'center'}}><Ionicons name={x} size={29} color="white"/><Text style={s.reelCount}>{['4.8K','267','179','264'][i]}</Text></View>)}</View></View>}
 
 const menuItems = [
   ['Saved','bookmark-outline'],['Dating','heart-outline'],['Games','game-controller-outline'],['Meta AI','sparkles-outline'],
@@ -95,6 +198,7 @@ const settingsItems = [
 function MenuRow({label,icon,onPress}){return <Pressable onPress={onPress} style={({pressed})=>[s.menuRow,pressed&&s.menuRowPressed]}><Ionicons name={icon} size={30}/><Text style={s.menuLabel}>{label}</Text></Pressable>}
 
 function MenuDrawer({visible,onClose,onSelect}){
+  const me=useData(api.getMe);
   const [settingsOpen,setSettingsOpen]=useState(false);
   const [helpOpen,setHelpOpen]=useState(false);
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -103,7 +207,7 @@ function MenuDrawer({visible,onClose,onSelect}){
       <SafeAreaView style={s.drawer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.drawerContent}>
           <View style={s.accountCard}>
-            <Pressable style={s.accountTop} onPress={()=>onSelect('Profile')}><Image source={{uri:avatars[0]}} style={s.menuAvatar}/><Text style={s.accountName}>Swayam Arora</Text><View style={s.accountChevron}><Ionicons name="chevron-down" size={23}/></View></Pressable>
+            <Pressable style={s.accountTop} onPress={()=>onSelect('Profile')}><Image source={{uri:me.data?.avatar_url||BLANK}} style={s.menuAvatar}/><Text style={s.accountName}>{me.data?.name||' '}</Text><View style={s.accountChevron}><Ionicons name="chevron-down" size={23}/></View></Pressable>
             <View style={s.accountDivider}/><Pressable style={s.createPage} onPress={()=>onSelect('Create Facebook Page')}><Ionicons name="add-circle" size={37} color="#606770"/><Text style={s.createPageText}>Create Facebook Page</Text></Pressable>
           </View>
           <View style={s.menuList}>{menuItems.map(([label,icon])=><MenuRow key={label} label={label} icon={icon} onPress={()=>onSelect(label)}/>)}</View>
@@ -129,6 +233,10 @@ export default function App(){
   let content=feature?<FeaturePage title={feature} onBack={()=>setFeature(null)}/>:inbox?<Inbox onBack={()=>setInbox(false)}/>:tab==='home'?<Home openMenu={()=>setMenuOpen(true)}/>:tab==='market'?<Marketplace openInbox={()=>setInbox(true)}/>:tab==='groups'?<Groups/>:tab==='notify'?<Notifications/>:tab==='profile'?<Profile/>:<Reels/>;
   return <SafeAreaView style={s.safe}><StatusBar barStyle={tab==='reels'&&!feature?'light-content':'dark-content'}/><View style={s.app}>{content}{!inbox&&!feature&&<Nav tab={tab} setTab={x=>{setTab(x);setInbox(false);setFeature(null)}}/>}<MenuDrawer visible={menuOpen} onClose={()=>setMenuOpen(false)} onSelect={selectMenu}/></View></SafeAreaView>
 }
+
+const x=StyleSheet.create({
+ error:{padding:20,color:'#b3261e',textAlign:'center'},empty:{padding:20,textAlign:'center',color:'#626b75'},joined:{backgroundColor:'#e4e6eb'}
+});
 
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:'#fff'},app:{flex:1,backgroundColor:'#fff'},page:{flex:1,backgroundColor:'#fff'},pressed:{opacity:.55},header:{height:58,flexDirection:'row',alignItems:'center',paddingHorizontal:10,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:'#e1e4e8'},headerLeft:{flexDirection:'row',alignItems:'center',gap:8,flex:1},headerRight:{flexDirection:'row',gap:5},headerTitle:{fontSize:25,fontWeight:'700'},logo:{color:BLUE,fontSize:37,letterSpacing:-1.5},iconBtn:{width:36,height:36,alignItems:'center',justifyContent:'center',borderRadius:20},badge:{position:'absolute',right:-1,top:-4,backgroundColor:'#e32636',minWidth:18,height:18,borderRadius:10,alignItems:'center',justifyContent:'center'},badgeText:{color:'white',fontSize:11,fontWeight:'700'},drawerShell:{flex:1,flexDirection:'row-reverse',backgroundColor:'rgba(0,0,0,.34)'},drawerScrim:{flex:1},drawer:{width:'88%',backgroundColor:'#fff'},drawerContent:{paddingTop:12,paddingBottom:22},accountCard:{marginHorizontal:14,borderRadius:16,backgroundColor:'#fff',shadowColor:'#000',shadowOpacity:.12,shadowRadius:10,shadowOffset:{width:0,height:3},elevation:5,borderWidth:StyleSheet.hairlineWidth,borderColor:'#e2e4e7'},accountTop:{height:82,flexDirection:'row',alignItems:'center',paddingHorizontal:15,gap:14},menuAvatar:{width:49,height:49,borderRadius:26},accountName:{fontSize:22,fontWeight:'600',flex:1},accountChevron:{width:43,height:43,borderRadius:24,backgroundColor:'#e4e6eb',alignItems:'center',justifyContent:'center'},accountDivider:{height:StyleSheet.hairlineWidth,backgroundColor:'#d5d8dc'},createPage:{height:63,flexDirection:'row',alignItems:'center',gap:14,paddingHorizontal:18},createPageText:{fontSize:20,fontWeight:'600',color:'#606770'},menuList:{paddingTop:20},menuRow:{height:66,flexDirection:'row',alignItems:'center',paddingHorizontal:22,gap:18},menuRowPressed:{backgroundColor:'#f0f2f5'},menuLabel:{fontSize:20,fontWeight:'500'},seeLess:{marginHorizontal:14,marginVertical:8,height:48,borderRadius:9,backgroundColor:'#e4e6eb',alignItems:'center',justifyContent:'center'},seeLessText:{fontSize:18,fontWeight:'700'},drawerDivider:{height:1,backgroundColor:'#d4d7db'},accordionHead:{height:72,flexDirection:'row',alignItems:'center',paddingHorizontal:18,gap:16},accordionText:{fontSize:21,fontWeight:'600',flex:1},submenu:{paddingBottom:6},featureEmpty:{flex:1,alignItems:'center',justifyContent:'center',padding:35},featureIcon:{width:70,height:70,borderRadius:35,backgroundColor:'#e7f3ff',alignItems:'center',justifyContent:'center'},featureTitle:{fontSize:24,fontWeight:'700',marginTop:18},featureBody:{fontSize:16,color:'#626b75',textAlign:'center',lineHeight:23,marginTop:8},
