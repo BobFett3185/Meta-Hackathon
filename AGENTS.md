@@ -1,222 +1,703 @@
-# AGENTS.md
-
-# NEST — Project Instructions
+# AGENTS.md — NEST
 
 ## 1. Project Overview
 
 **Product:** Nest
 **Tagline:** Find your people. Find your place.
-**Hackathon prompt:** Make Facebook valuable for young adults (Meta invite-only hackathon).
 
-Nest is an AI-powered local discovery network for young adults moving to new cities. It transforms fragmented Facebook communities into an organized ecosystem where users can discover:
+**Hackathon prompt:** Make Facebook valuable for young adults.
 
-- Housing and apartment listings.
-- Furniture and household items.
-- Compatible roommates.
-- Friends and people nearby.
-- People attending the same university or working at the same company.
-- Relevant local communities and resources.
+Nest is an AI-powered platform that helps young adults transition into new cities by connecting them with housing, compatible roommates, and meaningful local experiences.
 
-**Core idea:** Help young adults find not just a place to live, but everything and everyone they need to feel at home in a new city. Housing is the entry point; local discovery and meaningful connections are the broader vision.
+Moving somewhere new involves more than finding an apartment. Young adults need:
+- A place to live.
+- Compatible people to live with.
+- Friends and social connections.
+- Local activities and experiences.
+- Communities where they feel they belong.
 
-## 2. Product Principles
+These opportunities are currently scattered across Facebook Groups and other online communities.
 
-Always prioritize:
+Nest uses Meta Muse to understand and organize community information, make personalized recommendations, and help users build meaningful connections.
 
-1. A polished, intuitive consumer-facing experience.
-2. Functional end-to-end workflows over static mockups.
-3. AI-powered discovery rather than a generic chatbot.
-4. Community-driven information and recommendations.
-5. Relevant, explainable matches.
-6. A cohesive experience across housing, items, people, and communities.
-7. Hackathon feasibility. Avoid unnecessary complexity.
+**Core vision: Find housing, find your people, and feel at home in a new city.**
 
-Do not build a generic admin dashboard. Do not build a separate housing moderation product. Do not make roommate matching the only discovery feature.
+---
 
-## 3. Core Product Features
+# 2. The Three Core Product Pillars
 
-### A. Unified Housing Feed
+The entire application must be organized around these three features.
 
-- Aggregate housing posts from connected mock Facebook communities.
-- Use Muse to extract structured information from messy posts.
-- Display standardized housing cards.
-- Search/filter by location, keywords, budget, move-in date, listing type, and amenities.
-- Show the original source post and source community (the UI must make clear listings originate from community posts).
-- Allow users to save listings, open details, and contact the poster via a link or mock interaction.
+## PILLAR 1: HOUSING DATABASE
 
-Example: "Looking for someone to take over my lease! $1400 plus hydro, W/D in unit, available June 1, SLU. DM me!" becomes: rent $1,400/mo, South Lake Union (Seattle), available June 1, lease takeover, hydro excluded, in-unit W/D, source Seattle Housing Group.
+**Purpose:** Help young adults find housing through a centralized, intelligent database of community listings.
 
-### B. Local Discovery & Connections
+### How it works
 
-The key differentiator. Users describe what they need in natural language. The system must understand the request, identify intent, extract filters, search records, rank results, and explain recommendations.
+1. Ingest posts from connected mock Facebook housing communities.
+2. Process posts using Meta Muse.
+3. Extract structured housing information.
+4. Store the information in Supabase.
+5. Display standardized, searchable listings.
 
-**Items** — beds, desks, furniture, household supplies, free/secondhand items, bikes.
-**People** — roommates (compare budget, location, move-in date, lifestyle, cleanliness, sleep schedule, commute), friends, students, interns, young professionals, people moving to the same city (match on company, location, dates, university, interests).
-**Communities** — university Groups, company/internship communities, neighborhood and local-interest Groups.
+### Functionality
 
-Example requests:
+Users should be able to:
+- Browse housing listings.
+- Search by city, neighborhood, and keywords.
+- Filter by monthly budget.
+- Filter by move-in date.
+- Filter by lease duration and listing type.
+- Filter by amenities.
+- Save listings.
+- View detailed listing information.
+- View the original source Facebook post.
+- Receive alerts when relevant listings become available.
 
-- "Find me a bed near my apartment." (use the selected apartment's location)
-- "Find someone looking for a roommate with a similar budget and move-in date."
-- "Find other Amazon interns moving to Seattle in June."
-- "Find UBC students living near South Lake Union."
-- "I'm moving to Seattle in June. Which communities should I join?"
+### Listing information
 
-Discovery should feel like a personalized search engine, not a chatbot. Results are cards by type (housing, items, people, communities), each with a "why this matches" explanation.
+Where available, extract:
+- Rent.
+- Location.
+- Listing type.
+- Availability.
+- Move-in date.
+- Lease duration.
+- Number of bedrooms.
+- Number of bathrooms.
+- Amenities.
+- Utilities.
+- Images.
+- Contact information.
+- Original post and community.
 
-**Privacy:** people discovery is mutual and opt-in. Never expose private user information or auto-share personal details. Only users who opted into discovery appear in results.
+Preserve the original source content alongside extracted data.
 
-## 4. Technology Stack
+---
 
-- Next.js, React, TypeScript
-- Tailwind CSS, shadcn/ui, Lucide icons
-- Next.js API routes / server actions for the backend
-- Supabase PostgreSQL (+ Auth if needed, Storage for images)
-- Meta Muse API (server-side only)
-- Vercel for deployment
+## PILLAR 2: ROOMMATE COMPATIBILITY & MATCHING
 
-Avoid introducing additional frameworks or services unless genuinely necessary.
+**Purpose:** Help young adults find compatible people to live with and form households.
 
-## 5. AI Architecture
+This is more than a basic roommate directory. The goal is to identify people whose housing requirements and lifestyles align.
 
-Meta Muse is the intelligence layer, used behind the scenes by the backend. Users never talk to Muse directly.
+### User preferences
 
-Use Muse server-side for:
+Collect relevant information such as:
+- Budget.
+- Preferred neighborhoods.
+- Move-in date.
+- Lease duration.
+- Work or university location.
+- Commute preferences.
+- Cleanliness preferences.
+- Sleep schedule.
+- Lifestyle.
+- Social preferences.
+- Pets and other relevant living preferences.
 
-- Understanding unstructured community posts.
-- Extracting housing and item information.
-- Classifying posts (housing, furniture, roommate request, social connection, irrelevant, etc.).
-- Understanding screenshots/images where supported.
-- Flagging missing or ambiguous listing details.
-- Understanding natural-language discovery requests and extracting filters.
-- Helping rank results and explaining matches.
+### Functionality
 
-**Rules:**
+Users should be able to:
+- Create a roommate profile.
+- Set housing and lifestyle preferences.
+- Discover compatible roommates.
+- View compatibility scores.
+- Understand why someone is a good match.
+- Send connection requests.
+- View mutual preferences.
+- Discover potential household combinations.
+- Find housing that fits a combined household's requirements.
 
-- **Never invent Muse API endpoints, auth methods, or capabilities.** Use the official hackathon documentation and credentials only. If docs are unavailable, ask the user.
-- Keep AI behind a service abstraction:
-  - `services/ai/muse.ts` — real Muse client
-  - `services/ai/mock-ai.ts` — realistic mock implementation
-  - `services/ai/index.ts` — selects implementation (mock when no credentials)
-- The app must remain fully functional without live Muse credentials. Mock outputs must be realistic structured data, not generic placeholders.
-- Never expose API keys in frontend code.
+### Matching logic
 
-Keep separate service modules for AI, ingestion, and matching.
+Consider:
+- Budget compatibility.
+- Geographic compatibility.
+- Move-in date compatibility.
+- Lifestyle compatibility.
+- Housing requirements.
+- Shared preferences.
 
-## 6. Mock Facebook Environment
+Do not rely on arbitrary compatibility scores. Use understandable matching criteria and explain recommendations.
 
-The demo uses a simulated Facebook. We are NOT building a real scraper, and Muse does not automatically have access to Facebook Groups — real integrations require supported, authorized Facebook permissions.
+The system should support both directions:
+- People looking for roommates.
+- People with an existing room looking for someone to fill it.
 
-- Keep it separate from the Nest user experience (isolated section/route group). It is a data source, not the primary product.
-- Facebook-inspired UI: view Groups, browse posts, post details, comments, images, and optionally add new mock posts.
-- Groups: Seattle Housing, Sublets & Roommates; UBC Students Housing Network; Seattle Intern Housing Summer 2027; Seattle Furniture Marketplace; Young Professionals in Seattle; Amazon Interns 2027.
-- Seed **at least 50** realistic posts with authors, dates, comments, and images, covering: apartment listings, lease takeovers, roommate requests, furniture sales, free items, friend-seeking, internship intros, community recommendations, and irrelevant posts.
-- Include messy language and edge cases: missing rent, ambiguous locations, duplicate listings, screenshots, abbreviations (SLU, W/D), multiple listings in one post.
+---
+
+## PILLAR 3: LOCAL DISCOVERY & COMMUNITY ENGAGEMENT
+
+**Purpose:** Help users build a social life and feel connected to their new city.
+
+This is a major differentiator for Nest.
+
+The first two pillars help users settle into a new home. The third gives them reasons to continue using Nest after they have moved.
+
+Nest should proactively help users discover things to do, places to visit, and people to meet.
+
+### A. Discover nearby experiences
+
+Recommend relevant local activities and places based on:
+- User location.
+- Interests.
+- Preferences.
+- Community membership.
+- Previous interactions.
+- Time and availability.
+
+Examples:
+- Parks.
+- Cafes.
+- Restaurants.
+- Hiking trails.
+- Markets.
+- Events.
+- Fitness activities.
+- Social gatherings.
+- Local attractions.
+- University events.
+
+### B. Find people to experience things with
+
+This is essential.
+
+Nest should not just recommend a park or event. It should help users find other people who want to go too.
+
+Examples:
+
+A user receives a recommendation:
+
+"There's a beautiful park near you. Three people from your Seattle Interns community are interested in visiting this weekend. Want to join?"
+
+Other examples:
+- Find someone to go hiking with.
+- Meet other Amazon interns for coffee.
+- Find people interested in attending a local event.
+- Join a group exploring a new neighborhood.
+- Meet students from the same university nearby.
+
+Users must explicitly opt into activities and connections. Do not expose private information or assume people want to meet.
+
+### C. Community-based recommendations
+
+Use connected community information to identify relevant opportunities.
+
+Examples:
+- Other university students moving to the same city.
+- People working at the same company.
+- People from the same internship cohort.
+- People with similar interests.
+- People living in nearby neighborhoods.
+
+### D. Personalized notifications
+
+Nest should occasionally send relevant, personalized notifications to encourage users to explore their city and connect with others.
+
+Examples:
+
+**Local experience**
+"There's a weekend market happening near you. Four people from your community have saved it."
+
+**Social opportunity**
+"Two other Amazon interns near South Lake Union are interested in grabbing coffee this week."
+
+**Outdoor activity**
+"Three people from your community want to explore a nearby hiking trail this Saturday."
+
+**Community recommendation**
+"A group of UBC students is organizing a Seattle meetup this weekend."
+
+Notifications should:
+- Be personalized.
+- Be occasional, not excessive.
+- Be based on actual user interests and location.
+- Prioritize opportunities involving real people and shared interests.
+- Allow users to control notification preferences.
+- Never fabricate attendance or interest counts.
+
+The goal is to foster genuine connections, not maximize notification volume.
+
+### E. Engagement and retention
+
+Build functionality that encourages users to return to Nest.
+
+Potential features:
+- Personalized activity recommendations.
+- Upcoming events.
+- Interested people lists.
+- Group activity creation.
+- Activity invitations.
+- Community updates.
+- Saved places.
+- Personalized discovery feed.
+
+The experience should evolve as the user settles into their new city.
+
+---
+
+# 3. User Journey
+
+The application should support this journey:
+
+### Stage 1: Before moving
+The user discovers Nest, selects their destination, and finds housing.
+
+### Stage 2: Preparing to move
+The user creates a profile, sets preferences, and discovers compatible roommates.
+
+### Stage 3: Arriving in the city
+The user discovers nearby places, activities, and people with shared interests.
+
+### Stage 4: Building a social life
+Nest recommends activities, organizes connections, and helps users meet people.
+
+### Stage 5: Long-term engagement
+The user continues using Nest for community recommendations, events, local discovery, and new connections.
+
+**The first two pillars help people move. The third helps people belong.**
+
+---
+
+# 4. Technology Stack
+
+Use the following stack:
+
+### Frontend
+- Next.js.
+- React.
+- TypeScript.
+- Tailwind CSS.
+- shadcn/ui.
+- Lucide icons.
+
+### Backend
+- Next.js API routes and server-side functionality.
+- TypeScript.
+- Organized service modules.
+
+### Database
+- Supabase PostgreSQL.
+- Supabase Storage.
+- Supabase authentication if required.
+
+### AI
+- Meta Muse API.
+- Server-side integration.
+- Mock AI adapter as a fallback.
+
+### Deployment
+- Vercel.
+
+Avoid unnecessary infrastructure and dependencies.
+
+---
+
+# 5. AI Architecture: Meta Muse
+
+Muse is the intelligence layer powering Nest.
+
+Users should interact with Nest's own interface, not directly with Muse.
+
+Use Muse where supported for:
+
+- Understanding informal Facebook posts.
+- Extracting structured housing information.
+- Extracting furniture and item information.
+- Understanding screenshots and images.
+- Classifying community content.
+- Understanding natural-language discovery requests.
+- Extracting user intent and search criteria.
+- Supporting relevant recommendations.
+- Explaining roommate compatibility.
+- Understanding interests and community conversations.
+
+### AI implementation requirements
+
+- Keep all API keys server-side.
+- Do not invent Muse endpoints or capabilities.
+- Follow the official API documentation.
+- Create a service abstraction for AI operations.
+- Provide a realistic mock implementation if live API access is unavailable.
+- Validate structured AI outputs before saving them.
+- Keep original source posts available.
+
+Suggested structure:
+
+- `services/ai/muse.ts`
+- `services/ai/mock-ai.ts`
+- `services/ai/index.ts`
+
+---
+
+# 6. Mock Facebook Environment
+
+For the hackathon, build a simulated Facebook environment.
+
+We will demonstrate Nest using mock Facebook Groups and posts.
+
+We are not building an unauthorized Facebook scraping system.
+
+### Mock Groups
+
+Create realistic Groups such as:
+
+- Seattle Housing, Sublets & Roommates.
+- UBC Students Housing Network.
+- Seattle Intern Housing Summer 2027.
+- Seattle Furniture Marketplace.
+- Young Professionals in Seattle.
+- Amazon Interns 2027.
+
+### Mock post categories
+
+Include:
+- Housing listings.
+- Lease takeovers.
+- Roommate requests.
+- Furniture sales.
+- Free household items.
+- People looking for friends.
+- Internship introductions.
+- Local event recommendations.
+- Group activity invitations.
+- Community discussions.
+
+Create at least 50 realistic posts.
+
+Include informal language, abbreviations, missing information, duplicates, and images.
+
+### Mock Facebook functionality
+
+Users should be able to:
+- View Groups.
+- Browse posts.
+- Open post details.
+- View comments.
+- View images.
+- Add mock posts if useful.
 
 ### Ingestion pipeline
 
-1. Retrieve mock posts.
-2. Pass content to the AI layer.
-3. Convert relevant info into structured records.
-4. Save raw post + extracted data to Supabase.
-5. Avoid duplicate records.
+1. Retrieve posts from the mock Facebook application.
+2. Process posts using Muse or the mock AI service.
+3. Identify the content category.
+4. Extract relevant information.
+5. Save raw and structured data in Supabase.
+6. Avoid unnecessary duplicates.
+7. Preserve source references.
 
-Always keep the original source post linked to its extracted listing so users can trace info back to the community.
+For real Facebook integrations, only use supported and authorized content access.
 
-## 7. Data Architecture
+---
 
-Supabase is the primary database. Keep raw source data separate from AI-processed records, and preserve source-post references for everything extracted.
+# 7. Database Architecture
 
-Suggested tables (modify if needed, keep relationships clear, avoid duplication):
+Use Supabase PostgreSQL.
 
-- `users` — id, name, email, profile_image, university, company, current_location, bio, created_at
-- `communities` — id, name, description, location, category, image, created_at
-- `raw_posts` — id, community_id, author_id, original_content, image_url, post_category, original_post_url, created_at
-- `housing_listings` — id, raw_post_id, title, description, rent, location, latitude, longitude, move_in_date, lease_duration, listing_type, amenities, availability, created_at
-- `items` — id, raw_post_id, title, description, category, price, location, image_url, created_at
-- `user_preferences` — id, user_id, budget_min, budget_max, preferred_locations, move_in_date, lifestyle_preferences, interests, company, university
-- `connections` — id, user_id, connected_user_id, connection_type, status, created_at
-- `saved_listings` — id, user_id, listing_id, created_at (extend to support saving items and people, per the Saved screen)
+Suggested tables:
 
-Add indexes for location, category, rent/price, and dates.
+### users
+- id
+- name
+- email
+- profile_image
+- bio
+- university
+- company
+- current_location
+- destination_location
+- interests
+- created_at
 
-## 8. Frontend Structure
+### communities
+- id
+- name
+- description
+- location
+- category
+- image
+- created_at
 
-**Shell:** responsive sidebar (Home, Housing, Discover, My Connections, Saved, Profile) and top nav (search, notifications, profile avatar).
+### raw_posts
+- id
+- community_id
+- author_id
+- original_content
+- image_url
+- post_category
+- original_post_url
+- created_at
 
-- **Home** — personalized: welcome, destination city, relevant housing, suggested people, nearby items, recent community opportunities, quick discovery search.
-- **Housing** — listing cards, search, filters, optional map/location view, detail view showing the original post.
-- **Discover** — prominent NL search ("What are you looking for in your new city?") with prompt chips: Find a bed near my apartment / Find roommates within my budget / Meet other Amazon interns in Seattle / Find affordable furniture nearby / Discover communities near me.
-- **My Connections** — suggested people, potential roommates, same company/university/city, pending requests, compatibility explanations.
-- **Saved** — saved housing, items, and people.
+### housing_listings
+- id
+- raw_post_id
+- title
+- description
+- rent
+- location
+- latitude
+- longitude
+- move_in_date
+- lease_duration
+- listing_type
+- amenities
+- availability
+- created_at
 
-## 9. UI/UX Guidelines
+### items
+- id
+- raw_post_id
+- title
+- description
+- category
+- price
+- location
+- latitude
+- longitude
+- image_url
+- created_at
 
-UI quality is extremely important. Aim for a premium consumer-startup feel, not an admin dashboard.
+### user_preferences
+- id
+- user_id
+- budget_min
+- budget_max
+- preferred_locations
+- move_in_date
+- lifestyle_preferences
+- sleep_schedule
+- cleanliness_preferences
+- interests
+- company
+- university
+- notification_preferences
 
-- Minimalist, modern, welcoming; strong typography; generous spacing.
-- Rounded cards, subtle shadows, restrained palette, clear hierarchy.
-- Smooth transitions, thoughtful loading states, beautiful empty states.
-- Responsive layouts; one cohesive design system and component library.
+### connections
+- id
+- user_id
+- connected_user_id
+- connection_type
+- status
+- created_at
 
-Avoid: generic AI chatbot layouts, excessive gradients, too many colors, cluttered dashboards, excessive borders/dividers, inconsistent spacing, placeholder-looking cards.
+### saved_listings
+- id
+- user_id
+- listing_id
+- created_at
 
-All major buttons and interactions must work.
+### places
+- id
+- name
+- description
+- category
+- location
+- latitude
+- longitude
+- image_url
+- source
+- created_at
 
-## 10. Development Conventions
+### activities
+- id
+- place_id
+- title
+- description
+- date_time
+- created_by
+- community_id
+- created_at
 
-- TypeScript throughout; prefer reusable components.
-- Keep business logic outside UI components; keep frontend, backend, database, and AI logic separated.
-- Validate user inputs; handle loading, error, and empty states.
-- Server-side access for secrets; never ship keys to the client.
-- Keep database queries organized; keep functions small and readable.
-- Don't duplicate business logic; avoid unnecessary dependencies.
-- Don't hardcode the interface with static cards — connect UI to real database records.
-- Don't use fake success states for unfinished actions.
-- Inspect the existing codebase and follow its conventions before implementing; don't overwrite working code unnecessarily.
+### activity_interests
+- id
+- activity_id
+- user_id
+- status
+- created_at
 
-## 11. Demo Scenario
+### notifications
+- id
+- user_id
+- title
+- message
+- notification_type
+- related_activity_id
+- read_at
+- created_at
 
-A university student is moving to Seattle for an Amazon internship in June. Profile: destination Seattle, company Amazon, move-in June 1, budget $1,200–$1,700/month, preferred location South Lake Union, interests technology, fitness, social activities.
+Adjust the schema as necessary, but maintain clean relationships.
+
+Use indexes for location, categories, dates, and relevant search fields.
+
+---
+
+# 8. Frontend Application Structure
+
+Create a polished consumer-facing application.
+
+### Navigation
+
+- Home.
+- Housing.
+- Roommates.
+- Discover.
+- My Connections.
+- Saved.
+- Profile.
+
+### Home
+
+A personalized overview including:
+- Recommended housing.
+- Suggested roommates.
+- Upcoming activities.
+- Nearby places.
+- Suggested people.
+- Community updates.
+- Relevant notifications.
+
+### Housing
+
+- Searchable listing feed.
+- Budget filters.
+- Location filters.
+- Move-in date filters.
+- Listing details.
+- Original source posts.
+- Save functionality.
+
+### Roommates
+
+- User preference profiles.
+- Suggested compatible roommates.
+- Compatibility explanations.
+- Connection requests.
+- Household formation suggestions.
+
+### Discover
+
+This should be a major product experience.
+
+Show:
+- Nearby places.
+- Recommended activities.
+- Community events.
+- People interested in similar activities.
+- Group meetups.
+- Personalized recommendations.
+
+Include a natural-language search experience with examples such as:
+
+- "Find a park near me where I can meet people."
+- "Find other Amazon interns who want to get coffee."
+- "What is happening near my apartment this weekend?"
+- "Find people interested in hiking."
+- "Show me events near South Lake Union."
+
+### My Connections
+
+- Suggested people.
+- Roommate matches.
+- Shared interests.
+- Mutual communities.
+- Connection requests.
+- Activity connections.
+
+### Notifications
+
+- New relevant housing listings.
+- Roommate matches.
+- Nearby events.
+- Activity invitations.
+- Community recommendations.
+
+Allow users to manage notification preferences.
+
+### Saved
+
+Users should be able to save:
+- Housing listings.
+- Items.
+- People.
+- Places.
+- Activities.
+
+---
+
+# 9. UI/UX Requirements
+
+UI quality is extremely important for this hackathon.
+
+The product should feel like a polished consumer startup, not a generic admin dashboard.
+
+### Design direction
+
+- Modern.
+- Minimalist.
+- Warm and welcoming.
+- Premium visual quality.
+- Strong typography.
+- Generous spacing.
+- Rounded cards.
+- Subtle shadows.
+- Cohesive color palette.
+- Smooth transitions.
+- Responsive layouts.
+
+Avoid:
+- Excessive gradients.
+- Generic chatbot interfaces.
+- Cluttered dashboards.
+- Excessive borders.
+- Inconsistent typography.
+- Static placeholder cards.
+
+Use reusable components and consistent design tokens.
+
+Every major button and interaction should work.
+
+---
+
+# 10. Hackathon Demo Scenario
+
+Build around this scenario:
+
+A UBC student moves to Seattle for an Amazon internship in June.
 
 They use Nest to:
 
-1. Find an apartment in South Lake Union (structured from a messy group post).
-2. Select it and ask for an affordable bed nearby.
-3. Ask for a roommate with a similar budget and move-in date.
+1. Find an apartment in South Lake Union.
+2. Find a compatible roommate.
+3. Discover a bed or furniture near their apartment.
 4. Find other Amazon interns moving to Seattle.
-5. Discover relevant communities.
-6. View profiles and send connection requests.
+5. Discover a nearby park or social activity.
+6. See that other people from their community want to attend.
+7. Join the activity and connect with those people.
+8. Receive personalized recommendations for future activities.
 
-This must work end-to-end with seeded data.
+The demo should communicate that Nest helps someone transition into a new city and build a social life.
 
-## 12. Implementation Priorities
+Use realistic seeded data so the complete journey works without relying on real external users.
 
-Build incrementally and keep the app runnable after each phase:
+---
 
-1. **Foundation** — Next.js, Tailwind, shadcn/ui, Supabase, schema, mock groups/posts, seed data.
-2. **AI & ingestion** — ingestion service, Muse integration (where docs/credentials permit), mock fallback, structured extraction saved to Supabase.
-3. **Main UI** — shell, Home, Housing feed, listing details, Discover, My Connections.
-4. **Discovery** — intent understanding, location/preference filters, item discovery, roommate compatibility, people and community recommendations.
-5. **Polish** — wire everything to real records, loading/error/empty states, test the full demo, animations, responsiveness.
+# 11. Development Priorities
 
-## 13. Agent Working Rules
+Build in this order:
 
-Before making changes: inspect the repository, read this file, understand the existing architecture, identify relevant files, and propose a short plan for substantial changes.
+### Phase 1: Foundation
+- Set up Next.js.
+- Configure Tailwind and shadcn/ui.
+- Configure Supabase.
+- Create database schema.
+- Build mock Facebook application.
+- Seed realistic data.
 
-After making changes: run relevant checks, fix TypeScript errors, test affected workflows, summarize what changed, and flag anything unfinished.
-
-Do not claim a feature is complete unless it actually works. When requirements are ambiguous, ask before making major architectural assumptions.
-
-## 14. Definition of Done
-
-- A functioning mock Facebook environment with realistic posts.
-- AI-powered post extraction and a unified housing feed.
-- Natural-language local discovery: items, roommates, friends, communities.
-- Supabase persistence.
-- A polished, cohesive, responsive frontend.
-- A complete end-to-end demo of the scenario above.
-
-**Nest is more than a housing application. It is an intelligent network that helps young adults find housing, resources, people, and communities when starting somewhere new.**
-
-Find your people. Find your place.
+### Phase 2: AI and Ingestion
+- Build ingestion pipeline.
+- Integrate Muse.
+- Implement mock AI fallback.
+- Extract structured housing and item data.
+- Store
