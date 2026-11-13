@@ -14,7 +14,9 @@ function resolveApi() {
   if (process.env.EXPO_PUBLIC_NEST_API_URL) return process.env.EXPO_PUBLIC_NEST_API_URL;
   const hostUri = Constants.expoConfig?.hostUri || Constants.expoGoConfig?.debuggerHost;
   const host = hostUri?.split(":")[0];
-  if (host && !host.endsWith(".exp.direct")) return `http://${host}:${API_PORT}`;
+  // LAN: talk to the API port directly. Tunnel (any non-IP host): only the Expo port is exposed,
+  // so go through the dev server, which forwards /api/* to the API (see metro.config.js).
+  if (host) return /^(\d+\.){3}\d+$|^localhost$/.test(host) ? `http://${host}:${API_PORT}` : `https://${host}`;
   if (Platform.OS === "web" && typeof window !== "undefined") return `http://${window.location.hostname}:${API_PORT}`;
   return `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:${API_PORT}`;
 }
@@ -133,7 +135,11 @@ export const nestService = {
   saveGoal: async (goal) => {
     const confirmed = { ...goal, updatedAt: new Date().toISOString() };
     await patch({ goal: confirmed, draft: confirmed });
-    if (isSupabaseConfigured) await saveNestPreferences(confirmed);
+    // The goal is already saved on the device; the Supabase copy is a sync, so it must never block a search.
+    if (isSupabaseConfigured)
+      await saveNestPreferences(confirmed).catch((e) =>
+        console.warn("Could not sync Nest preferences to Supabase.", e?.message),
+      );
     return confirmed;
   },
   getGoal: async () => (await load()).goal,

@@ -48,7 +48,12 @@ export async function interpret(text: string, base: any, ctx: Ctx): Promise<Inte
   });
   const pick = (v: any, fb: any) => (v === null || v === undefined || (Array.isArray(v) && !v.length) ? fb : v);
   const city = pick(r.city, base.city);
-  const sameCity = (city ?? "").trim().toLowerCase() === (base.city ?? "").trim().toLowerCase();
+  const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+  const sameCity = norm(city) === norm(base.city);
+  // For a city we have listings in, keep only neighborhoods we actually know (in their canonical spelling).
+  // A vague area like "downtown" would otherwise become a strict filter that no listing can match.
+  const known = Object.entries(ctx.neighborhoodsByCity).find(([c]) => norm(c) === norm(city))?.[1];
+  if (known) r.preferredNeighborhoods = [...new Set((r.preferredNeighborhoods ?? []).map((n: string) => known.find((k) => norm(k) === norm(n))).filter(Boolean))];
   const goal = {
     ...base, rawPrompt: text,
     intent: r.intent ?? base.intent,

@@ -61,12 +61,13 @@ export function matchHomes(homes, goal) {
   return homes
     .filter((h) => goal.sourceIds.includes(h.sourceId))
     .filter(
+      // Only the two explicit choices narrow the search; "either", "any" or anything else shows all.
       (h) =>
-        !goal.housingType ||
-        goal.housingType === "either" ||
-        (goal.housingType === "room"
+        goal.housingType === "room"
           ? /room/i.test(h.leaseType)
-          : !/room/i.test(h.leaseType)),
+          : goal.housingType === "entire-home"
+            ? !/room/i.test(h.leaseType)
+            : true,
     )
     .map((listing) => ({
       listing,

@@ -99,9 +99,9 @@ export default function IntentSetup({ draft, onChange }) {
             onChange={(housingType) => onChange({ housingType })}
           />
           <View
-            style={[ui.row, { minHeight: 48, justifyContent: "space-between" }]}
+            style={[ui.row, { minHeight: 48, marginTop: 12, justifyContent: "space-between" }]}
           >
-            <Label style={{ fontSize: 14 }}>Furnished home</Label>
+            <Label style={{ fontSize: 14, flex: 1 }}>Furnished home</Label>
             <Switch
               accessibilityLabel="Furnished home"
               value={draft.furnishedRequirement}
@@ -140,7 +140,7 @@ export default function IntentSetup({ draft, onChange }) {
             onChange={(roommateCount) => onChange({ roommateCount })}
           />
           <View
-            style={[ui.row, { minHeight: 48, justifyContent: "space-between" }]}
+            style={[ui.row, { minHeight: 48, marginTop: 12, justifyContent: "space-between" }]}
           >
             <Label style={{ fontSize: 14, flex: 1 }}>Prefer a quiet home</Label>
             <Switch
