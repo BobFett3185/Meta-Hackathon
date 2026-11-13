@@ -34,11 +34,12 @@ import {
   Welcome,
   Homes,
   Roommates,
-  Community,
   HomeDetail,
   PersonDetail,
 } from "./screens";
 import Intake from "./Intake";
+import Community, {EventDetails} from "./Community";
+import {hasStay} from "./event-utils.mjs";
 import { imageSource } from "./assets";
 import Profile from "./ProfileScreen";
 import { profileFromGoal, emptyProfile } from "./profileData";
@@ -82,6 +83,9 @@ function NestScreen({ onExit }) {
   const [matches, setMatches] = useState([]);
   const [roommates, setRoommates] = useState([]);
   const [community, setCommunity] = useState({ events: [], people: [] });
+  const [communityStatus,setCommunityStatus]=useState('idle');
+  const [communityError,setCommunityError]=useState(null);
+  const communityRequest=useRef(0),communityLoaded=useRef(false);
   const [status, setStatus] = useState("idle");
   const [updatedAt, setUpdatedAt] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -229,15 +233,15 @@ function NestScreen({ onExit }) {
       live = false;
     };
   }, [fetchResults]);
-  useEffect(() => {
-    let live = true;
-    nestService.getCommunity(area, store?.interests || []).then((c) => {
-      if (live) setCommunity(c);
-    });
-    return () => {
-      live = false;
-    };
-  }, [area, store?.interests]);
+  const refreshCommunity=useCallback(async()=>{
+    const version=++communityRequest.current;
+    if(!hasStay(goal)){setCommunity({events:[],people:[]});setCommunityStatus('idle');return;}
+    setCommunityStatus(communityLoaded.current?'refresh':'loading');setCommunityError(null);
+    try{const result=await nestService.getCommunity(goal);if(version===communityRequest.current){communityLoaded.current=result.events.length>0;setCommunity(result);setCommunityStatus('idle');}}
+    catch(e){if(version===communityRequest.current){setCommunityError(e.message);setCommunityStatus('error');}}
+  },[goal]);
+  useEffect(()=>{++communityRequest.current;communityLoaded.current=false;setCommunity({events:[],people:[]});setCommunityStatus('loading');setCommunityError(null);},[goal]);
+  useEffect(()=>{if(tab==='Community')refreshCommunity();return()=>{++communityRequest.current;};},[tab,refreshCommunity]);
   const closeIntake = () => {
     Keyboard.dismiss();
     setIntake(null);
@@ -295,7 +299,7 @@ function NestScreen({ onExit }) {
     setIntake(null);
     setRoute(null);
     setPendingGoal(null);
-    setTab(value.intent === "Roommate" ? "Roommates" : "Homes");
+    if (tab !== "Community") setTab(value.intent === "Roommate" ? "Roommates" : "Homes");
     await fetchResults(saved);
     if (saved.persistence === "local-only")
       notify("Search saved on this device. Cloud sync is unavailable.");
@@ -602,6 +606,13 @@ function NestScreen({ onExit }) {
               }}
             >
               <Community
+                goal={goal}
+                interests={store.interests || []}
+                status={communityStatus}
+                error={communityError}
+                onRefresh={refreshCommunity}
+                onEdit={()=>openIntake()}
+                onSaved={openSaved}
                 area={area}
                 community={community}
                 onArea={() => setSheet({ type: "area" })}
@@ -612,7 +623,6 @@ function NestScreen({ onExit }) {
                 saved={store.saved}
                 onSave={save}
                 onEvent={(item) => setSheet({ type: "event", item })}
-                onPerson={(item) => setRoute({ type: "person", item })}
               />
             </View>
           </>
@@ -755,6 +765,7 @@ function NestScreen({ onExit }) {
                 {sheet.item.sourceName}
               </Label>
               <Label>{sheet.item.originalPostText}</Label>
+              {sheet.item.sources?.slice(1).map(source=><View key={source.postId} style={{marginTop:16}}><Label>{source.name}</Label><Label>{source.text}</Label></View>)}
             </>
           )}
           {sheet?.type === "contact" && (
@@ -783,30 +794,7 @@ function NestScreen({ onExit }) {
               </Button>
             </>
           )}
-          {sheet?.type === "event" && (
-            <>
-              <Image
-                source={imageSource(sheet.item.imageUrl)}
-                style={{ height: 200, width: "100%", borderRadius: 22 }}
-              />
-              <View
-                style={[
-                  ui.row,
-                  { justifyContent: "space-between", marginTop: 12 },
-                ]}
-              >
-                <Label>Saturday, June 5, 2027 · 10 AM PDT</Label>
-                <Bookmark
-                  saved={store.saved.events.includes(sheet.item.id)}
-                  onPress={() => save("events", sheet.item.id)}
-                />
-              </View>
-              <Label style={[ui.secondary, { marginBottom: 12 }]}>
-                {sheet.item.neighborhood} · Seattle Newcomers
-              </Label>
-              <Label>{sheet.item.description}</Label>
-            </>
-          )}
+          {sheet?.type === "event" && <EventDetails event={sheet.item} goal={goal} saved={store.saved.events.includes(sheet.item.id)} onSave={()=>save('events',sheet.item.id)} onSource={source}/>}
           {sheet?.type === "interests" && (
             <>
               {setup.interests.map((interest) => (
