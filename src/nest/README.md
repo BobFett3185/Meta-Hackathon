@@ -1,5 +1,13 @@
 # Nest integration handoff
 
+## Intake and gesture refinement
+
+`IntentSetup.js` makes the shared intake respond to its selected intent. Home exposes room/entire-home/either and furnishing; Roommate exposes existing-housing status, desired roommate count, and quiet-home preference; Both combines home and household controls. Hidden answers remain in the draft when switching modes. These choices persist through the existing goal adapter. Home type filters listings, and the selected intent controls which result sets are fetched. Roommate count is a requested household size, not proof of a formed household or group compatibility calculation.
+
+`Gallery.js` replaces fade-and-replace paging with stable keyed cards, finger-following transforms, velocity-aware spring settling, circular paging, and short-swipe snap-back. Selection updates before storage is awaited; the selected ID still drives the map. Reduced motion skips the settling animation. The mascot is larger in the welcome/header, appears in intake guidance, and can be pressed to squish on the welcome screen.
+
+Refinement checks: nine matching unit tests; `node scripts/nest-refinements.cjs` covers all three modes, answer retention, mid-drag movement, stable card identity, circular navigation, map synchronization, and result routing at 375/390 widths. It stubs connected database requests rather than writing account data. Captures are in `artifacts/nest/refinements/`. Native swipe feel remains an Expo Go device check; web/iOS/Android JavaScript exports were checked without Hermes bytecode.
+
 Nest is a contained Expo/React Native feature in the existing Facebook mock app. Open the Facebook menu, then **Nest**. One shared intake supports Home, Roommate, and Both; confirmed searches populate Homes and Roommates. Community uses the selected neighborhood and interests. Details, source posts, saved items with undo, map selection, and home-area confirmation are local interactions.
 
 ## Files

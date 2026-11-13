@@ -1,0 +1,47 @@
+{
+  "version": "nest-expansion-v1",
+  "verifiedAt": "2026-11-13T01:27:28.190Z",
+  "before": {
+    "nest_preferences": null,
+    "fb_comments": 144,
+    "fb_users": 22,
+    "fb_group_members": 113,
+    "fb_reactions": 294,
+    "fb_groups": 22,
+    "fb_marketplace_messages": 9,
+    "fb_posts": 48,
+    "fb_post_images": 33,
+    "fb_marketplace_threads": 5,
+    "fb_reels": 1,
+    "fb_stories": 4,
+    "fb_marketplace_images": 11,
+    "fb_marketplace_listings": 11
+  },
+  "inserted": {
+    "fb_users": 120,
+    "fb_group_members": 285,
+    "fb_posts": 312,
+    "fb_post_images": 178,
+    "fb_comments": 25,
+    "fb_reactions": 468,
+    "fb_marketplace_listings": 180,
+    "fb_marketplace_images": 183
+  },
+  "after": {
+    "fb_reactions": 762,
+    "fb_marketplace_listings": 191,
+    "fb_posts": 360,
+    "fb_groups": 22,
+    "fb_marketplace_images": 194,
+    "fb_users": 142,
+    "fb_group_members": 398,
+    "fb_post_images": 211,
+    "fb_marketplace_messages": 9,
+    "fb_reels": 1,
+    "fb_marketplace_threads": 5,
+    "nest_preferences": null,
+    "fb_stories": 4,
+    "fb_comments": 169
+  },
+  "allExpectedRecordsVerified": true
+}

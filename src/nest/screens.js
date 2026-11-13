@@ -17,7 +17,6 @@ import {
   Mascot,
   Bookmark,
   Reasons,
-  CircularGallery,
   MapAdapter,
   Header,
   ui,
@@ -25,12 +24,13 @@ import {
   money,
   dateRange,
 } from "./components";
+import CircularGallery from "./Gallery";
 
 export function Welcome({ onAdd, onExample }) {
   return (
     <ScrollView contentContainerStyle={styles.welcome}>
       <View style={{ alignItems: "center", marginBottom: 24 }}>
-        <Mascot size={120} />
+        <Mascot size={156} interactive />
       </View>
       <Label style={styles.welcomeTitle}>Tell us about your{"\n"}move.</Label>
       <Label
@@ -130,7 +130,12 @@ export function Homes({
         showsVerticalScrollIndicator={false}
       >
         <GoalSummary goal={goal} onEdit={onEdit} onSettings={onSettings} />
-        <Label style={ui.section}>Your housing matches</Label>
+        <Label style={ui.section}>{current?.isDemoSample ? "Sample homes" : "Your housing matches"}</Label>
+        {current?.isDemoSample && (
+          <Label style={ui.secondary}>
+            No exact matches in this demo. Explore these sample homes; your search preferences are unchanged.
+          </Label>
+        )}
         {(status === "loading" || status === "refresh") && (
           <View style={[ui.row, { marginVertical: 16 }]}>
             <ActivityIndicator color={colors.blue} />
@@ -164,7 +169,11 @@ export function Homes({
         )}
         {!current && status !== "loading" && status !== "error" && (
           <View style={{ paddingVertical: 32 }}>
-            <Label>No listings meet all your must-haves.</Label>
+            <Label>
+              {goal.intent === "Roommate"
+                ? "Your search is focused on roommates. Choose Both to look for a home too."
+                : "No listings meet all your must-haves."}
+            </Label>
             <Link onPress={onEdit}>Edit search</Link>
             <Link onPress={onRetry}>Retry</Link>
           </View>
@@ -296,7 +305,11 @@ export function Roommates({
         </>
       ) : (
         <>
-          <Label>No roommates meet your shared preferences.</Label>
+          <Label>
+            {goal.intent === "Home"
+              ? "Your search is focused on homes. Choose Both to find roommates too."
+              : "No roommates meet your shared preferences."}
+          </Label>
           <Link onPress={onEdit}>Edit search</Link>
         </>
       )}
@@ -469,7 +482,7 @@ export function HomeDetail({
         >
           <Mascot size={48} />
           <View style={{ flex: 1 }}>
-            <Label style={[ui.section, { marginBottom: 8 }]}>Why it fits</Label>
+            <Label style={[ui.section, { marginBottom: 8 }]}>{match?.isDemoSample ? "Sample home · check your criteria" : "Why it fits"}</Label>
             <Reasons criteria={match?.criteria || []} />
             <Link onPress={() => onCriteria(match?.criteria || [])}>
               See all criteria

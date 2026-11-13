@@ -23,9 +23,58 @@ const ok = ({ data, error }) => {
   return data;
 };
 
+export const isSupabaseConfigured = Boolean(
+  process.env.EXPO_PUBLIC_SUPABASE_URL &&
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+);
+
 let mePromise;
 export const getMe = () =>
   (mePromise ||= supabase.from('fb_users').select('*').eq('name', ME_NAME).single().then(ok).catch(() => FALLBACK_ME));
+
+const preferenceRow = (goal, userId) => ({
+  user_id: userId,
+  raw_prompt: goal.rawPrompt,
+  intent: goal.intent,
+  city: goal.city,
+  preferred_neighborhoods: goal.preferredNeighborhoods,
+  start_date: goal.startDate,
+  end_date: goal.endDate,
+  budget_amount: goal.budgetAmount,
+  budget_basis: goal.budgetBasis,
+  housing_type: goal.housingType,
+  furnished_requirement: goal.furnishedRequirement,
+  roommate_count: goal.roommateCount,
+  already_has_home: goal.alreadyHasHome,
+  must_haves: goal.mustHaves,
+  preferences: goal.preferences,
+  source_ids: goal.sourceIds,
+  max_results: goal.maxResults,
+  cadence: goal.cadence,
+  notifications_enabled: goal.notificationsEnabled,
+  goal_json: goal,
+  updated_at: goal.updatedAt,
+});
+
+export async function saveNestPreferences(goal) {
+  const me = await getMe();
+  if (me.id === FALLBACK_ME.id) {
+    throw new Error(`Supabase user "${ME_NAME}" was not found`);
+  }
+  ok(await supabase.from('nest_preferences').upsert(preferenceRow(goal, me.id)));
+}
+
+export async function getNestPreferences() {
+  const me = await getMe();
+  if (me.id === FALLBACK_ME.id) return null;
+  const row = await supabase
+    .from('nest_preferences')
+    .select('goal_json')
+    .eq('user_id', me.id)
+    .maybeSingle()
+    .then(ok);
+  return row?.goal_json || null;
+}
 
 // ---- feed ---------------------------------------------------------------
 const POST_SELECT =

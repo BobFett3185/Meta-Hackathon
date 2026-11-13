@@ -24,18 +24,34 @@ All screens, sample data, and styles currently live in [App.js](./App.js). The s
 
 The product brief specifies Next.js, TypeScript, Tailwind CSS, shadcn/ui, Lucide, Supabase, and server-side Meta Muse integration. That is the planned architecture in the brief, not the current implementation. Resolve whether to retain the Expo app or migrate before producing implementation code. Designs can proceed against the existing mobile shell in the meantime.
 
-## Running the skeleton
+## Launching the app
 
-Install dependencies with `npm install`, then use:
+1. Install dependencies and create your env file (fill in the Supabase URL and anon key):
+
+   ```sh
+   npm install
+   cp .env.example .env
+   ```
+
+2. Start the app and scan the QR code with your phone's camera (requires the Expo Go app):
+
+   ```sh
+   npx expo start --tunnel --clear
+   ```
+
+   `--tunnel` works on any network, including campus or venue Wi-Fi that blocks device-to-device traffic. If your phone and computer share a home network or a phone hotspot, `npx expo start --lan --clear` is faster.
+
+Other targets:
 
 ```sh
-npm start
-npm run web
-npm run android
-npm run ios
+npm run web      # browser preview
+npm run ios      # iOS simulator (macOS only)
+npm run android  # Android emulator
 ```
 
-Native previews require a compatible device or emulator; local iOS simulators require macOS. The optional Windows `npm run start:tunnel` script expects a project-local Node runtime at `.tools/node-v22.23.5-win-x64` and starts Expo on port 8082.
+On branches that include the Nest API server (`server/`), use `npm run dev -- --tunnel --clear` instead: it starts the API and Expo together.
+
+If Expo Go shows "The request timed out", the phone cannot reach your computer: make sure the dev server is still running and use `--tunnel`. The Windows-only `npm run start:tunnel` script expects a project-local Node runtime at `.tools/node-v22.23.5-win-x64`.
 
 ## UI planning
 

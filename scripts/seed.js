@@ -45,6 +45,7 @@ async function insert(table, rows) {
 async function wipe() {
   // Children first; cascades handle the rest, but be explicit.
   const tables = [
+    'nest_preferences',
     'fb_notifications', 'fb_marketplace_messages', 'fb_marketplace_threads',
     'fb_marketplace_images', 'fb_marketplace_listings', 'fb_reels', 'fb_stories',
     'fb_reactions', 'fb_comments', 'fb_post_images', 'fb_posts',
@@ -90,6 +91,52 @@ const users = userDefs.map(([k, name, img, location, birthday, cover]) => {
   U[k] = id();
   return { id: U[k], name, avatar_url: av(img), cover_url: cover || null, location, birthday: birthday || null };
 });
+
+const demoGoal = {
+  id: 'summer-2027',
+  rawPrompt: 'I’m moving to Seattle June–August 2027. Find a furnished room under $1,500 per person and someone to share with.',
+  intent: 'Both',
+  city: 'Seattle',
+  preferredNeighborhoods: ['South Lake Union'],
+  startDate: '2027-06-01',
+  endDate: '2027-08-31',
+  budgetAmount: 1500,
+  budgetBasis: 'person',
+  housingType: 'room',
+  furnishedRequirement: true,
+  roommateCount: 1,
+  alreadyHasHome: false,
+  mustHaves: ['Location', 'Dates', 'Budget', 'Furnished'],
+  preferences: ['Quiet home', 'Near Amazon'],
+  sourceIds: ['marketplace', 'interns', 'ubc'],
+  maxResults: 5,
+  cadence: 'Daily',
+  notificationsEnabled: false,
+  updatedAt: new Date().toISOString(),
+};
+
+const nestPreferences = [{
+  user_id: U.dhweya,
+  raw_prompt: demoGoal.rawPrompt,
+  intent: demoGoal.intent,
+  city: demoGoal.city,
+  preferred_neighborhoods: demoGoal.preferredNeighborhoods,
+  start_date: demoGoal.startDate,
+  end_date: demoGoal.endDate,
+  budget_amount: demoGoal.budgetAmount,
+  budget_basis: demoGoal.budgetBasis,
+  housing_type: demoGoal.housingType,
+  furnished_requirement: demoGoal.furnishedRequirement,
+  roommate_count: demoGoal.roommateCount,
+  already_has_home: demoGoal.alreadyHasHome,
+  must_haves: demoGoal.mustHaves,
+  preferences: demoGoal.preferences,
+  source_ids: demoGoal.sourceIds,
+  max_results: demoGoal.maxResults,
+  cadence: demoGoal.cadence,
+  notifications_enabled: demoGoal.notificationsEnabled,
+  goal_json: demoGoal,
+}];
 
 const friendships = [];
 const addFriends = (a, list) => list.forEach((b) => {
@@ -251,6 +298,9 @@ post('seaYoung', 'viren', 62, null, 'Pickleball anyone? Beginners welcome, Green
 post('amazonInterns', 'arr', 6, null, 'Hi everyone! I’m an SDE intern, starting June 8th. Would love to meet other interns before we start, anyone down for coffee near SLU this week?', [], 3);
 post('amazonInterns', 'marcus', 27, null, 'Intern meetup at Cascade Park this Friday after work! bring snacks', [IMG.reel], 4);
 post('amazonInterns', 'divyaS', 50, null, 'does anyone know if the orientation is in person or hybrid? and do we get a badge on day 1?', [], 2);
+post('seaIntern', 'aisha', 14, 'Furnished room near Amazon campus', 'Room open June 1 through August 31 in a quiet 2BR near SLU. $1,425 per person with utilities and Wi-Fi included. Looking for another intern who likes a tidy home.', [IMG.apt2], 2);
+post('seaFurniture', 'nathan', 18, 'Free kitchen starter set', 'Moving out after my internship and giving away plates, pans, mugs, and a coffee maker. Pickup near South Lake Union this weekend.', [IMG.bundle], 1);
+post('seaYoung', 'lena', 42, 'Weekend board game meetup', 'A few of us are meeting at a cafe in South Lake Union Saturday afternoon for board games. New to Seattle? Come say hi!', [], 3);
 
 // Profile / home feed posts (no group)
 post(null, 'dhweya', 120, null, 'Just booked my flight to Seattle ✈️ see you in June!', [IMG.apt3], 0);
@@ -404,6 +454,7 @@ const notifications = [
   await wipe();
   console.log('Inserting...');
   await insert('fb_users', users);
+  await insert('nest_preferences', nestPreferences);
   await insert('fb_friendships', friendships);
   await insert('fb_groups', groups);
   await insert('fb_group_members', groupMembersUniq);
