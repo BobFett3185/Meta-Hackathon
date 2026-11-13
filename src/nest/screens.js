@@ -27,6 +27,7 @@ import {
 import CircularGallery from "./Gallery";
 import HomePhoto from "./HomePhoto";
 import HomeFit from "./HomeFit";
+import {eventDate} from './event-utils.mjs';
 
 export function Welcome({ onAdd, onExample }) {
   return (
@@ -365,103 +366,6 @@ export function Roommates({
     </ScrollView>
   );
 }
-export function Community({
-  area,
-  community,
-  onArea,
-  onInterests,
-  saved,
-  onSave,
-  onEvent,
-  onPerson,
-}) {
-  const event = community.events[0];
-  return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View
-        style={[
-          ui.row,
-          { justifyContent: "space-between", marginBottom: 16, marginTop: 4 },
-        ]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Choose neighborhood"
-          onPress={onArea}
-          style={[ui.row, { minHeight: 44, gap: 0 }]}
-        >
-          <Label style={{ fontWeight: "600" }}>{area}</Label>
-          <Icon name="chevron-down" size={17} />
-        </Pressable>
-        <Link onPress={onInterests}>Edit interests</Link>
-      </View>
-      <Label style={[ui.heading, { marginBottom: 12 }]}>
-        Around your neighborhood
-      </Label>
-      {event ? (
-        <>
-          <Image
-            source={imageSource(event.imageUrl)}
-            style={styles.eventPhoto}
-          />
-          <View style={[ui.row, { alignItems: "flex-start", marginTop: 8 }]}>
-            <View style={{ flex: 1 }}>
-              <Label style={ui.section}>{event.title}</Label>
-              <Label>Saturday · 10 AM</Label>
-            </View>
-            <Bookmark
-              saved={saved.events.includes(event.id)}
-              onPress={() => onSave("events", event.id)}
-            />
-          </View>
-          <Button style={{ marginTop: 12 }} onPress={() => onEvent(event)}>
-            View event
-          </Button>
-        </>
-      ) : (
-        <Label style={ui.secondary}>No events in this neighborhood yet.</Label>
-      )}
-      <Label style={[ui.heading, { marginTop: 24, marginBottom: 12 }]}>
-        People open to meeting up
-      </Label>
-      {community.people.map((p) => (
-        <Pressable
-          key={p.id}
-          accessibilityRole="button"
-          accessibilityLabel={`Meet ${p.name}`}
-          onPress={() => onPerson(p)}
-          style={[
-            ui.row,
-            {
-              paddingVertical: 12,
-              borderBottomWidth: 1,
-              borderColor: colors.divider,
-              gap: 14,
-            },
-          ]}
-        >
-          <Image source={imageSource(p.avatarUrl)} style={styles.avatar} />
-          <View style={{ flex: 1 }}>
-            <Label style={{ fontWeight: "700", fontSize: 18 }}>{p.name}</Label>
-            <Label style={{ fontSize: 14 }}>{p.introduction}</Label>
-            <Label style={[ui.secondary, { fontSize: 13 }]}>
-              {p.sourceName}
-            </Label>
-          </View>
-          <Icon name="chevron-forward" />
-        </Pressable>
-      ))}
-      {!community.people.length && (
-        <Label style={ui.secondary}>
-          No introductions match this area and your interests yet.
-        </Label>
-      )}
-    </ScrollView>
-  );
-}
 export function HomeDetail({
   listing,
   goal,
@@ -589,7 +493,7 @@ export function HomeDetail({
               <Label style={{ fontWeight: "600", fontSize: 14 }}>
                 {event.title}
               </Label>
-              <Label style={ui.secondary}>Saturday morning</Label>
+              <Label style={ui.secondary}>{eventDate(event)}</Label>
             </View>
           </Pressable>
         )}

@@ -1,7 +1,10 @@
+import {supabase} from '../supabase';
+import {fetchEvents} from './event-source.mjs';
+import {eligible} from './event-utils.mjs';
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { events, people } from "./fixtures"; // Community tab demo data only (no Supabase tables for events yet)
+import { people } from "./fixtures"; // Resolve legacy saved people only.
 import { toggleSaved } from "./matching";
 import { getNestPreferences, isSupabaseConfigured, saveNestPreferences } from "../api";
 import { getMe } from "../api";
@@ -176,21 +179,7 @@ export const nestService = {
   // Everything Muse extracted from the groups, read from Supabase by the server.
   getHomeMatches: async (goal) => (await search(goal)).homes,
   getRoommateMatches: async (goal) => (await search(goal)).roommates,
-  getCommunity: async (area, interests = []) => ({
-    events: events
-      .filter((e) => e.neighborhood === area)
-      .sort(
-        (a, b) =>
-          b.interests.filter((x) => interests.includes(x)).length -
-          a.interests.filter((x) => interests.includes(x)).length,
-      ),
-    people: people.filter(
-      (p) =>
-        p.openToMeeting &&
-        p.neighborhood === area &&
-        (!interests.length || p.interests.some((x) => interests.includes(x))),
-    ),
-  }),
+  getCommunity: async (goal) => ({events:(await fetchEvents(supabase)).filter(e=>eligible(e,goal)),people:[],fetchedAt:new Date().toISOString()}),
   updateSearchSchedule: async (cadence, notificationsEnabled) => {
     const { goal } = await load();
     return goal
@@ -205,6 +194,11 @@ export const nestService = {
   updateState: patch,
   getSavedItems: async () => {
     const { saved } = await load();
+    let savedEvents=[];
+    if(saved.events.length){
+      try{savedEvents=await fetchEvents(supabase,saved.events);}
+      catch{savedEvents=saved.events.map(id=>({id,title:'Unable to load event. Reopen Saved to retry.',unavailable:true}));}
+    }
     return [
       ...live.homes
         .filter((x) => saved.homes.includes(x.id))
@@ -212,8 +206,7 @@ export const nestService = {
       ...[...live.roommates, ...people]
         .filter((x) => saved.people.includes(x.id))
         .map((x) => ({ ...x, kind: "person", label: x.name })),
-      ...events
-        .filter((x) => saved.events.includes(x.id))
+      ...savedEvents
         .map((x) => ({ ...x, kind: "event", label: x.title })),
     ];
   },
