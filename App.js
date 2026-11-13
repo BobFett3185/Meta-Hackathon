@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, ActivityIndicator, Modal, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, ActivityIndicator, Modal, Animated, PanResponder } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as api from './src/api';
 import Nest from './src/nest/Nest';
@@ -248,6 +249,7 @@ export default function App(){
   const selectMenu=(label)=>{const routes={Marketplace:'market',Groups:'groups',Reels:'reels',Profile:'profile',Friends:'groups',Feeds:'home'}; setMenuOpen(false); setInbox(false); if(routes[label]){setFeature(null);setTab(routes[label]);}else{setFeature(label);}};
   let content=feature==='Nest'?<Nest onExit={()=>setFeature(null)}/>:feature?<FeaturePage title={feature} onBack={()=>setFeature(null)}/>:inbox?<Inbox onBack={()=>setInbox(false)}/>:tab==='home'?<Home openMenu={()=>setMenuOpen(true)}/>:tab==='market'?<Marketplace openInbox={()=>setInbox(true)}/>:tab==='groups'?<Groups/>:tab==='notify'?<Notifications/>:tab==='profile'?<Profile/>:<Reels/>;
   return (
+    <SafeAreaProvider>
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle={tab==='reels'&&!feature?'light-content':'dark-content'}/>
       <View style={s.app}>
@@ -257,6 +259,7 @@ export default function App(){
         <MenuDrawer visible={menuOpen} onClose={()=>setMenuOpen(false)} onSelect={selectMenu}/>
       </View>
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
