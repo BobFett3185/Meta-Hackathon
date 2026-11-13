@@ -75,10 +75,21 @@ export interface RoommateProfile {
 export interface CommunityEvent {
   id: string;
   title: string;
-  imageUrl: string;
+  imageUrl: string | null;
+  city: string;
+  endsAt?: string | null;
+  venue?: string | null;
+  category: string;
+  price: number | null;
+  currency: string | null;
+  sourceId: string;
+  sourceName: string;
+  postId: string;
+  originalPostText: string;
+  status: 'scheduled' | 'cancelled';
   startsAt: string;
   timezone: string;
-  neighborhood: string;
+  neighborhood: string | null;
   description: string;
   interests: string[];
   sourceUrl: string | null;

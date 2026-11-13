@@ -1,16 +1,27 @@
 const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const same = (a, b) => norm(a) === norm(b);
-// A per-person budget also covers a whole home that costs no more than it. A whole-home budget never
-// covers a per-person price, because the total for the home is unknown.
+// Compare what the searcher would actually pay.
+// - Same basis: compare directly.
+// - Per-person budget, whole-home price: the whole home fits if it costs no more than the budget.
+// - Whole-home budget, per-person price: the household pays the price once per person. Someone searching
+//   only for housing is a household of one, so a room within their budget fits.
+const householdSize = (goal) => (goal.intent === "Home" ? 1 : 1 + (goal.roommateCount || 1));
 const withinBudget = (listing, goal) =>
-  listing.monthlyRent <= goal.budgetAmount &&
-  (listing.rentBasis === goal.budgetBasis || (goal.budgetBasis === "person" && listing.rentBasis === "home"));
+  listing.rentBasis === goal.budgetBasis || goal.budgetBasis === "person"
+    ? listing.monthlyRent <= goal.budgetAmount
+    : listing.monthlyRent * householdSize(goal) <= goal.budgetAmount;
 // null = the post states no dates at all. A post with no end date is open-ended.
 const coversDates = (listing, goal) =>
   !listing.availableFrom && !listing.availableTo
     ? null
     : (!listing.availableFrom || listing.availableFrom <= goal.startDate) &&
       (!listing.availableTo || listing.availableTo >= goal.endDate);
+// Days of the stay a dated post is available for (0 when it never overlaps).
+const overlapDays = (listing, goal) => {
+  const from = listing.availableFrom && listing.availableFrom > goal.startDate ? listing.availableFrom : goal.startDate;
+  const to = listing.availableTo && listing.availableTo < goal.endDate ? listing.availableTo : goal.endDate;
+  return Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1) || 0;
+};
 export function evaluateHome(listing, goal) {
   const criterion = (criterionId, label, matched, evidence) => ({
     criterionId,
@@ -28,7 +39,9 @@ export function evaluateHome(listing, goal) {
     ),
     criterion(
       "dates",
-      "Available for your dates",
+      coversDates(listing, goal) === false && overlapDays(listing, goal)
+        ? "Available for part of your dates"
+        : "Available for your dates",
       coversDates(listing, goal),
       !listing.availableFrom && !listing.availableTo
         ? "Dates not stated in the original post"
@@ -79,7 +92,7 @@ export function matchHomes(homes, goal) {
         goal.housingType === "room"
           ? /room/i.test(h.leaseType)
           : goal.housingType === "entire-home"
-            ? !/room/i.test(h.leaseType)
+            ? !/room/i.test(h.leaseType) && h.rentBasis !== "person" // a per-person sublet is a room, not a whole home
             : true,
     )
     .map((listing) => ({
@@ -87,11 +100,15 @@ export function matchHomes(homes, goal) {
       listingId: listing.id,
       criteria: evaluateHome(listing, goal),
     }))
-    // Budget, dates, area and furnishing must not conflict with the goal. Posts that leave dates out stay in,
-    // marked unknown, and rank below the ones that confirm every criterion.
-    .filter((m) => m.criteria.slice(0, 4).every((c) => c.status !== "not-matched"))
-    .sort((a, b) => confirmed(b) - confirmed(a))
+    .filter((m) => m.criteria.slice(0, 4).every((c) => c.status !== "not-matched" || c.criterionId === "dates"))
+    .map((m) => ({ ...m, covered: overlapDays(m.listing, goal), full: m.criteria[1].status !== "not-matched" }))
+    // Budget, area and furnishing must not conflict with the goal, and the home must be available for at least
+    // part of the stay. Homes that cover the whole stay come first; ones that cover only part of it follow,
+    // flagged partialDates so the app never calls them a dates match. Longest coverage first.
+    .filter((m) => m.full || m.covered > 0)
+    .sort((a, b) => b.full - a.full || (a.full ? confirmed(b) - confirmed(a) : b.covered - a.covered))
     .slice(0, goal.maxResults)
+    .map(({ covered, full, ...m }) => (full ? m : { ...m, partialDates: true }))
     .map((m) => ({
       ...m,
       summaryReasons: m.criteria
