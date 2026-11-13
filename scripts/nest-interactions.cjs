@@ -23,7 +23,7 @@ const { chromium, expect } = require("@playwright/test");
       .getByRole("button", { name: "Review preferences", exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Find my matches", exact: true })
+      .getByRole("button", { name: "Find homes & roommates", exact: true })
       .click();
     await page.getByRole("button", { name: "Next home" }).click();
     await expect.poll(async () => (await state()).selectedId).toBe("home-2");
@@ -74,7 +74,7 @@ const { chromium, expect } = require("@playwright/test");
       .getByRole("button", { name: "Review preferences", exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Find my matches", exact: true })
+      .getByRole("button", { name: "Find homes & roommates", exact: true })
       .click();
     await expect(
       page.getByText("No listings meet all your must-haves.", { exact: true }),

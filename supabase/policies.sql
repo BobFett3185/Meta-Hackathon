@@ -7,3 +7,10 @@ create policy "anon unlike"      on fb_reactions     for delete using (true);
 
 create policy "anon join group"  on fb_group_members for insert with check (true);
 create policy "anon update group member" on fb_group_members for update using (true) with check (true);
+
+create policy "anon read nest preferences"
+  on nest_preferences for select using (true);
+create policy "anon save nest preferences"
+  on nest_preferences for insert with check (true);
+create policy "anon update nest preferences"
+  on nest_preferences for update using (true) with check (true);

@@ -18,7 +18,7 @@ const timeAgo = (iso) => {
   return d < 7 ? `${d}d` : `${Math.round(d / 7)}w`;
 };
 const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-const money = (n) => (n == null || Number(n) === 0 ? 'Free' : `$${Number(n)}`);
+const money = (n) => (n == null ? 'Price on request' : Number(n) === 0 ? 'Free' : `$${Number(n)}`);
 const compact = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : `${n}`);
 
 // Loads data on mount / when deps change. `reload` refetches without a spinner flash.

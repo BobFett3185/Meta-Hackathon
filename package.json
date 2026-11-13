@@ -10,6 +10,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "seed": "node --env-file=.env scripts/seed.js",
+    "seed:preview": "node --env-file=.env scripts/expand-mock-data.cjs",
+    "seed:expand": "node --env-file=.env scripts/expand-mock-data.cjs --apply",
+    "db:inventory": "node --env-file=.env scripts/mock-db-inventory.cjs",
+    "test:corpus": "node --test scripts/data/nest-corpus.test.cjs",
     "test:nest": "node --test src/nest/matching.test.mjs",
     "capture:nest": "node scripts/nest-capture.cjs"
   },

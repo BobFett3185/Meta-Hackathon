@@ -179,6 +179,37 @@ create table fb_notifications (
 );
 create index on fb_notifications (user_id, created_at desc);
 
+-- ---------------------------------------------------------------- nest preferences
+-- The confirmed answers from the Nest intake flow. This is separate from the
+-- Facebook mock profile so the app can evolve the intake without changing it.
+create table nest_preferences (
+  user_id                 uuid primary key references fb_users(id) on delete cascade,
+  raw_prompt              text not null,
+  intent                  text not null check (intent in ('Home', 'Roommate', 'Both')),
+  city                    text not null,
+  preferred_neighborhoods text[] not null default '{}',
+  start_date              date not null,
+  end_date                date not null,
+  budget_amount           numeric(10,2) not null check (budget_amount > 0),
+  budget_basis            text not null check (budget_basis in ('person', 'home')),
+  housing_type            text not null,
+  furnished_requirement   boolean not null default false,
+  roommate_count          integer check (roommate_count is null or roommate_count > 0),
+  already_has_home        boolean,
+  must_haves              text[] not null default '{}',
+  preferences             text[] not null default '{}',
+  source_ids              text[] not null default '{}',
+  max_results             integer not null default 5 check (max_results between 1 and 20),
+  cadence                 text not null default 'Manual' check (cadence in ('Manual', 'Daily', 'Weekly')),
+  notifications_enabled  boolean not null default false,
+  goal_json               jsonb not null default '{}'::jsonb,
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now(),
+  check (start_date <= end_date)
+);
+create index on nest_preferences (city);
+create index on nest_preferences (start_date, end_date);
+
 -- ---------------------------------------------------------------- RLS
 -- Mock app: everything is publicly readable with the anon key.
 -- Writes happen via the service role (seed script) for now.
@@ -193,3 +224,11 @@ begin
     execute format('create policy "public read" on %I for select using (true)', t);
   end loop;
 end $$;
+
+alter table nest_preferences enable row level security;
+create policy "public read nest preferences"
+  on nest_preferences for select using (true);
+create policy "public insert nest preferences"
+  on nest_preferences for insert with check (true);
+create policy "public update nest preferences"
+  on nest_preferences for update using (true) with check (true);

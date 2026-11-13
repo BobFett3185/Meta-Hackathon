@@ -33,7 +33,7 @@ fs.mkdirSync(out, { recursive: true });
       .click();
     await capture("intake");
     await page
-      .getByRole("button", { name: "Find my matches", exact: true })
+      .getByRole("button", { name: "Find homes & roommates", exact: true })
       .click();
     await page
       .getByRole("button", { name: "View home", exact: true })

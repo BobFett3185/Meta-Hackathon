@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { View, TextInput, Pressable, Switch, Keyboard } from "react-native";
 import {
   Sheet,
@@ -12,6 +12,7 @@ import {
   money,
 } from "./components";
 import { nestService } from "./service";
+import IntentSetup, { intentCopy } from "./IntentSetup";
 
 export default function Intake({
   draft,
@@ -26,6 +27,7 @@ export default function Intake({
   const [editor, setEditor] = useState(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const setupEdits = useRef({});
   const update = (patch) => onDraft({ ...draft, ...patch });
   const setup = nestService.getSetup();
   const act = async () => {
@@ -35,12 +37,13 @@ export default function Intake({
     try {
       if (!review) {
         const result = await nestService.interpretGoal(draft.rawPrompt, draft);
-        onDraft(result.goal);
+        onDraft({ ...result.goal, ...setupEdits.current });
         if (result.missing) setError(result.missing);
         else setReview(true);
       } else if (
-        draft.intent === "Both" &&
-        (draft.roommateCount == null || draft.alreadyHasHome == null)
+        draft.intent !== "Home" &&
+        (draft.roommateCount == null ||
+          (draft.intent === "Roommate" && draft.alreadyHasHome == null))
       )
         setError("Answer the household question before finding matches.");
       else if (
@@ -104,7 +107,7 @@ export default function Intake({
           {pending
             ? "Saving…"
             : review
-              ? "Find my matches"
+              ? intentCopy[draft.intent].action
               : "Review preferences"}
         </Button>
       }
@@ -112,8 +115,39 @@ export default function Intake({
       <Tabs
         choices={["Home", "Roommate", "Both"]}
         value={draft.intent}
-        onChange={(intent) => update({ intent })}
+        onChange={(intent) => {
+          update({ intent });
+          setError("");
+          setEditor(null);
+        }}
       />
+      <IntentSetup
+        draft={draft}
+        onChange={(patch) => {
+          setupEdits.current = { ...setupEdits.current, ...patch };
+          update(patch);
+        }}
+      />
+      {draft.intent !== "Home" && (
+        <View
+          style={{
+            backgroundColor: colors.pale,
+            borderRadius: 12,
+            padding: 12,
+            marginTop: 8,
+          }}
+        >
+          <Label style={{ fontWeight: "700", marginBottom: 4 }}>
+            Introduce yourself and your ideal roommate
+          </Label>
+          <Label style={ui.secondary}>
+            Share a little about yourself, your daily routine, and what you're
+            looking for in a roommate. Think sleep schedules, cleanliness, pets,
+            and how social you like your home to be. Include your city, dates,
+            and budget too.
+          </Label>
+        </View>
+      )}
       <TextInput
         accessibilityLabel="Your moving goal"
         multiline
@@ -167,7 +201,7 @@ export default function Intake({
             </View>
           )}
           {row(
-            `${money(draft.budgetAmount)} ${draft.budgetBasis === "person" ? "per person" : "total home"}${draft.furnishedRequirement ? " · Furnished" : ""}`,
+            `${money(draft.budgetAmount)} ${draft.budgetBasis === "person" ? "per person" : "total home"}${draft.intent !== 'Roommate' && draft.furnishedRequirement ? " · Furnished" : ""}`,
             "budget and furnishing",
           )}
           {editor === "budget and furnishing" && (
@@ -190,14 +224,14 @@ export default function Intake({
                   })
                 }
               />
-              <View style={[ui.row, { justifyContent: "space-between" }]}>
+              {draft.intent !== 'Roommate' && <View style={[ui.row, { justifyContent: "space-between" }]}>
                 <Label>Furnished</Label>
                 <Switch
                   accessibilityLabel="Furnished required"
                   value={draft.furnishedRequirement}
                   onValueChange={(v) => update({ furnishedRequirement: v })}
                 />
-              </View>
+              </View>}
             </View>
           )}
           <Label style={{ fontWeight: "700", marginTop: 8 }}>Preferences</Label>
@@ -216,28 +250,6 @@ export default function Intake({
                     .map((x) => x.trim())
                     .filter(Boolean),
                 }),
-            )}
-          {draft.intent === "Both" && draft.roommateCount == null && (
-            <View style={{ marginTop: 12 }}>
-              {field(
-                "How many roommates would you like?",
-                draft.roommateCount,
-                (v) => update({ roommateCount: Math.max(1, Number(v)) }),
-                true,
-              )}
-            </View>
-          )}
-          {draft.intent === "Both" &&
-            draft.roommateCount != null &&
-            draft.alreadyHasHome == null && (
-              <View style={{ marginTop: 12 }}>
-                <Label>Do you already have housing?</Label>
-                <Tabs
-                  choices={["Yes", "No"]}
-                  value=""
-                  onChange={(v) => update({ alreadyHasHome: v === "Yes" })}
-                />
-              </View>
             )}
         </View>
       )}

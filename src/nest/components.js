@@ -11,9 +11,7 @@ import {
   ScrollView,
   Keyboard,
   Animated,
-  useWindowDimensions,
   AccessibilityInfo,
-  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { imageSource } from "./assets";
@@ -97,11 +95,43 @@ export function Link({ children, onPress, style }) {
     </Pressable>
   );
 }
-export function Mascot({ size = 42 }) {
-  return (
-    <View
-      accessible={false}
-      style={{ width: size * 1.16, height: size, overflow: "visible" }}
+export function Mascot({ size = 42, interactive = false }) {
+  const squish = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
+  const press = (value) => {
+    if (reduced) return;
+    Animated.spring(squish, {
+      toValue: value,
+      stiffness: value ? 450 : 240,
+      damping: value ? 30 : 16,
+      mass: 0.5,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  };
+  const graphic = (
+    <Animated.View
+      style={{
+        transform: [
+          {
+            scaleX: squish.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.12],
+            }),
+          },
+          {
+            scaleY: squish.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 0.86],
+            }),
+          },
+          {
+            translateY: squish.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, size * 0.06],
+            }),
+          },
+        ],
+      }}
     >
       <Image
         source={require("./assets/mascot.png")}
@@ -114,6 +144,26 @@ export function Mascot({ size = 42 }) {
           top: -size * 0.06,
         }}
       />
+    </Animated.View>
+  );
+  if (interactive)
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Give Nest a squish"
+        onPressIn={() => press(1)}
+        onPressOut={() => press(0)}
+        style={{ width: size * 1.16, height: size }}
+      >
+        {graphic}
+      </Pressable>
+    );
+  return (
+    <View
+      accessible={false}
+      style={{ width: size * 1.16, height: size, overflow: "visible" }}
+    >
+      {graphic}
     </View>
   );
 }
@@ -144,7 +194,7 @@ export function Header({ onBack, title, onSaved, onDemo, children }) {
             onPress={onSaved}
             style={ui.iconAction}
           >
-            <Mascot size={36} />
+            <Mascot size={48} />
           </Pressable>
         ))}
     </View>
@@ -243,170 +293,6 @@ export function Reasons({ criteria }) {
             <Label style={{ flex: 1 }}>{c.label}</Label>
           </View>
         ))}
-    </View>
-  );
-}
-export function CircularGallery({
-  matches,
-  selectedId,
-  onSelect,
-  onOpen,
-  saved,
-  onSave,
-}) {
-  const [width, setWidth] = useState(390);
-  const [reduced, setReduced] = useState(false);
-  const fade = useRef(new Animated.Value(1)).current;
-  const index = Math.max(
-    0,
-    matches.findIndex((x) => x.listingId === selectedId),
-  );
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduced);
-    const sub = AccessibilityInfo.addEventListener(
-      "reduceMotionChanged",
-      setReduced,
-    );
-    return () => sub.remove();
-  }, []);
-  useEffect(() => {
-    fade.setValue(reduced ? 1 : 0.55);
-    Animated.timing(fade, {
-      toValue: 1,
-      duration: reduced ? 0 : 280,
-      useNativeDriver: true,
-    }).start();
-  }, [selectedId, reduced]);
-  const advance = (delta) =>
-    onSelect(
-      matches[(index + delta + matches.length) % matches.length].listingId,
-    );
-  const pan = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) =>
-      Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 1.8,
-    onPanResponderRelease: (_, g) => {
-      if (Math.abs(g.dx) > 40) advance(g.dx < 0 ? 1 : -1);
-    },
-  });
-  const { fontScale } = useWindowDimensions();
-  const galleryHeight = 278 + Math.max(0, fontScale - 1) * 180;
-  const cardWidth = Math.min(250, width * 0.64);
-  const positions =
-    matches.length >= 3 ? [-1, 1, 0] : matches.length === 2 ? [1, 0] : [0];
-  return (
-    <View>
-      <View
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        style={[ui.gallery, { height: galleryHeight }]}
-        {...pan.panHandlers}
-      >
-        {positions.map((pos) => {
-          const match =
-            matches[(index + pos + matches.length) % matches.length];
-          const h = match.listing;
-          return (
-            <Animated.View
-              key={`${pos}-${h.id}`}
-              style={[
-                ui.galleryCard,
-                {
-                  left: width / 2 - cardWidth / 2 + pos * cardWidth * 0.64,
-                  width: cardWidth,
-                  top: pos ? 24 : 12,
-                  zIndex: pos ? 1 : 3,
-                  opacity: pos ? 1 : fade,
-                  transform: [
-                    { perspective: 1000 },
-                    { scale: pos ? 0.84 : 1 },
-                    { rotateY: `${pos * -10}deg` },
-                    { rotateZ: `${pos * 1.5}deg` },
-                  ],
-                },
-              ]}
-            >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Home ${((index + pos + matches.length) % matches.length) + 1} of ${matches.length}, ${money(h.monthlyRent)} per month`}
-                onPress={() => (pos ? onSelect(h.id) : onOpen(h))}
-              >
-                <Image
-                  source={imageSource(h.photoUrls[0])}
-                  style={ui.galleryPhoto}
-                />
-                <View style={ui.galleryCopy}>
-                  <Label
-                    style={{
-                      fontSize: pos ? 17 : 21,
-                      lineHeight: 25,
-                      fontWeight: "700",
-                      textAlign: "center",
-                    }}
-                  >
-                    {money(h.monthlyRent)}
-                    {!pos && " / month"}
-                  </Label>
-                  {!pos && (
-                    <>
-                      <Label
-                        style={{
-                          fontSize: 14,
-                          lineHeight: 19,
-                          textAlign: "center",
-                        }}
-                      >
-                        {h.neighborhood}
-                      </Label>
-                      <Label
-                        style={{
-                          fontSize: 13,
-                          lineHeight: 18,
-                          textAlign: "center",
-                        }}
-                      >
-                        Budget + dates match
-                      </Label>
-                    </>
-                  )}
-                </View>
-              </Pressable>
-              {!pos && (
-                <View
-                  style={{
-                    position: "absolute",
-                    right: 6,
-                    top: 6,
-                    backgroundColor: "rgba(255,255,255,.92)",
-                    borderRadius: 12,
-                  }}
-                >
-                  <Bookmark
-                    saved={saved?.includes(h.id)}
-                    onPress={() => onSave(h.id)}
-                  />
-                </View>
-              )}
-            </Animated.View>
-          );
-        })}
-      </View>
-      <Label style={ui.sourceCenter}>{matches[index].listing.sourceName}</Label>
-      {matches.length > 1 && (
-        <View style={[ui.row, { justifyContent: "center", gap: 12 }]}>
-          <IconAction
-            name="chevron-back"
-            label="Previous home"
-            onPress={() => advance(-1)}
-          />
-          <Label style={{ fontSize: 14 }}>
-            {index + 1} of {matches.length}
-          </Label>
-          <IconAction
-            name="chevron-forward"
-            label="Next home"
-            onPress={() => advance(1)}
-          />
-        </View>
-      )}
     </View>
   );
 }

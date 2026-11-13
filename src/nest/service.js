@@ -1,5 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  getNestPreferences,
+  isSupabaseConfigured,
+  saveNestPreferences,
+} from "../api";
+import {
   homes,
   roommates,
   events,
@@ -8,7 +13,7 @@ import {
   sources,
   defaultPrompt,
 } from "./fixtures";
-import { interpretPrompt, matchHomes, toggleSaved } from "./matching";
+import { interpretPrompt, demoHomeMatches, toggleSaved } from "./matching";
 const KEY = "nest.demo.v1";
 const initial = {
   goal: null,
@@ -25,12 +30,25 @@ let hydrated;
 let writes = Promise.resolve();
 async function load() {
   if (!hydrated)
-    hydrated = AsyncStorage.getItem(KEY).then((raw) => {
+    hydrated = AsyncStorage.getItem(KEY).then(async (raw) => {
       if (raw) {
         try {
           state = { ...initial, ...JSON.parse(raw) };
         } catch {
           state = initial;
+        }
+      }
+      if (isSupabaseConfigured) {
+        try {
+          const remoteGoal = await getNestPreferences();
+          if (
+            remoteGoal &&
+            (!state.goal || remoteGoal.updatedAt > state.goal.updatedAt)
+          ) {
+            state = { ...state, goal: remoteGoal, draft: remoteGoal };
+          }
+        } catch (error) {
+          console.warn("Could not load Nest preferences from Supabase.", error);
         }
       }
       return state;
@@ -61,11 +79,12 @@ export const nestService = {
   saveGoal: async (goal) => {
     const confirmed = { ...goal, updatedAt: new Date().toISOString() };
     await patch({ goal: confirmed, draft: confirmed });
+    if (isSupabaseConfigured) await saveNestPreferences(confirmed);
     return confirmed;
   },
   getGoal: async () => (await load()).goal,
   saveDraft: (draft) => patch({ draft }),
-  getHomeMatches: async (goal) => matchHomes(homes, goal),
+  getHomeMatches: async (goal) => demoHomeMatches(homes, goal),
   getRoommateMatches: async (goal) =>
     roommates
       .filter(

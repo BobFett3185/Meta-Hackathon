@@ -126,8 +126,17 @@ export function evaluateHome(listing, goal) {
   ];
 }
 export function matchHomes(homes, goal) {
+  if (goal.intent === "Roommate") return [];
   return homes
     .filter((h) => goal.sourceIds.includes(h.sourceId))
+    .filter(
+      (h) =>
+        !goal.housingType ||
+        goal.housingType === "either" ||
+        (goal.housingType === "room"
+          ? /room/i.test(h.leaseType)
+          : !/room/i.test(h.leaseType)),
+    )
     .map((listing) => ({
       listing,
       listingId: listing.id,
@@ -142,6 +151,18 @@ export function matchHomes(homes, goal) {
         .slice(0, 3)
         .map((c) => c.label),
     }));
+}
+// Keep the hardcoded demo browsable without pretending samples satisfy a search.
+export function demoHomeMatches(homes, goal) {
+  const matches = matchHomes(homes, goal);
+  if (matches.length || goal.intent === "Roommate") return matches;
+  return homes.slice(0, goal.maxResults).map((listing) => ({
+    listing,
+    listingId: listing.id,
+    isDemoSample: true,
+    criteria: evaluateHome(listing, goal),
+    summaryReasons: [],
+  }));
 }
 export function toggleSaved(saved, kind, id) {
   const items = saved[kind] || [];
