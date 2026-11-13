@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, ActivityIndicator, Modal, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, Modal, Animated, PanResponder } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as api from './src/api';
 import Nest from './src/nest/Nest';
+import LoadingSquishy from './src/nest/LoadingSquishy';
 
 const BLUE = '#0866ff';
 const W = Dimensions.get('window').width;
@@ -37,7 +38,7 @@ function useData(fn, deps = []) {
 
 // Shows a spinner / error, otherwise renders children(data).
 const Loaded = ({ q, children }) => {
-  if (q.loading) return <ActivityIndicator style={{ margin: 40 }} color={BLUE} />;
+  if (q.loading) return <LoadingSquishy style={{ margin: 20 }} />;
   if (q.error) return <Text style={x.error}>Couldn’t load data.{`\n`}{q.error.message}</Text>;
   return children(q.data);
 };
@@ -175,7 +176,7 @@ function Reels(){
   const reel = useData(api.getReel);
   const r = reel.data;
   return <View style={[s.page,{backgroundColor:'#111'}]}>
-    {reel.loading&&<ActivityIndicator style={{marginTop:200}} color="white"/>}
+    {reel.loading&&<LoadingSquishy style={{marginTop:160}} light />}
     {r&&<>
       <Image source={{uri:r.thumbnail_url}} style={s.reelBg}/>
       <View style={s.reelText}><Text style={s.reelCaption}>{r.location}</Text><Text style={{color:'white',fontWeight:'600'}}>{r.author.name}  •  Follow</Text><Text style={{color:'white'}}>{r.caption}</Text></View>

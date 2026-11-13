@@ -5,7 +5,6 @@ import {
   Pressable,
   TextInput,
   Image,
-  ActivityIndicator,
   BackHandler,
   Keyboard,
   Linking,
@@ -47,6 +46,7 @@ import { profileFromGoal, emptyProfile } from "./profileData";
 import { SquishyContext } from "./Squishy";
 import PhotoFlight from "./PhotoFlight";
 import HomePhoto from "./HomePhoto";
+import LoadingSquishy from "./LoadingSquishy";
 
 // Loads the user's setup (groups, cities, default search) from Supabase before showing Nest.
 export default function Nest(props) {
@@ -68,7 +68,7 @@ export default function Nest(props) {
   if (!ready)
     return (
       <View style={{ flex: 1, padding: 24, justifyContent: "center" }}>
-        <Label>Loading your communities…</Label>
+        <LoadingSquishy label={"Loading your communities…"} />
       </View>
     );
   return <NestScreen {...props} />;
@@ -390,7 +390,7 @@ function NestScreen({ onExit }) {
             <Link onPress={onExit}>Back to Facebook</Link>
           </>
         ) : (
-          <ActivityIndicator color={colors.blue} />
+          <LoadingSquishy />
         )}
       </View>
     );
@@ -585,7 +585,7 @@ function NestScreen({ onExit }) {
                   display: tab === "Roommates" ? "flex" : "none",
                 }}
               >
-                  {roommatesLoading ? <ActivityIndicator color={colors.blue} accessibilityLabel="Loading roommate matches"/> : roommatesError ? <View style={{padding:20,gap:12}}><Label>{roommatesError}</Label><Button onPress={()=>fetchResults(goal,true)}>Retry roommate search</Button></View> : <Roommates
+                  {roommatesLoading ? <LoadingSquishy label="Loading roommate matches…"/> : roommatesError ? <View style={{padding:20,gap:12}}><Label>{roommatesError}</Label><Button onPress={()=>fetchResults(goal,true)}>Retry roommate search</Button></View> : <Roommates
                   goal={goal}
                   people={roommates}
                   saved={store.saved.people}

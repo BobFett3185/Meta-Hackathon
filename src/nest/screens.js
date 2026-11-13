@@ -6,7 +6,6 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
 } from "react-native";
 import {
   Label,
@@ -28,6 +27,7 @@ import CircularGallery from "./Gallery";
 import RoommateDeck from "./RoommateDeck";
 import HomePhoto from "./HomePhoto";
 import HomeFit from "./HomeFit";
+import LoadingSquishy from "./LoadingSquishy";
 import {eventDate} from './event-utils.mjs';
 
 export function Welcome({ onAdd, onExample }) {
@@ -144,41 +144,7 @@ export function Homes({
           </Label>
         )}
         {(status === "loading" || status === "refresh") && (
-          <View style={[ui.row, { marginVertical: 16 }]}>
-            <Mascot size={46} mood="thinking" />
-            <Label>
-              {status === "refresh"
-                ? "Refreshing results…"
-                : "Finding your matches…"}
-            </Label>
-          </View>
-        )}
-        {status === "loading" && !current && (
-          <View
-            accessibilityLabel="Loading housing cards"
-            style={{
-              height: 260,
-              flexDirection: "row",
-              gap: 12,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {[0, 1, 2].map((i) => (
-              <View
-                key={i}
-                style={{
-                  width: i === 1 ? "58%" : "18%",
-                  height: i === 1 ? 240 : 198,
-                  borderRadius: 22,
-                  backgroundColor: "#EAE8EF",
-                  transform: [
-                    { rotate: i === 0 ? "-3deg" : i === 2 ? "3deg" : "0deg" },
-                  ],
-                }}
-              />
-            ))}
-          </View>
+          <LoadingSquishy label={status === "refresh" ? "Refreshing results…" : "Loading your matches…"} size={current ? 48 : 72} />
         )}
         {status === "refresh" && updatedAt && (
           <Label style={ui.secondary}>
