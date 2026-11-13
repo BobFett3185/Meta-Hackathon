@@ -14,7 +14,7 @@
     "seed:expand": "node --env-file=.env scripts/expand-mock-data.cjs --apply",
     "db:inventory": "node --env-file=.env scripts/mock-db-inventory.cjs",
     "test:corpus": "node --test scripts/data/nest-corpus.test.cjs",
-    "test:nest": "node --test src/nest/matching.test.mjs src/nest/profile.test.mjs",
+    "test:nest": "node --test src/nest/matching.test.mjs src/nest/profile.test.mjs src/nest/search-results.test.mjs",
     "test:nest-ui": "node scripts/nest-personality.cjs",
     "capture:nest": "node scripts/nest-capture.cjs",
     "ingest": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/ingest.mts",

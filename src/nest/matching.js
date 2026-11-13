@@ -5,7 +5,9 @@ const same = (a, b) => norm(a) === norm(b);
 // - Per-person budget, whole-home price: the whole home fits if it costs no more than the budget.
 // - Whole-home budget, per-person price: the household pays the price once per person. Someone searching
 //   only for housing is a household of one, so a room within their budget fits.
-const householdSize = (goal) => (goal.intent === "Home" ? 1 : 1 + (goal.roommateCount || 1));
+// A request for one room stays a one-room search in Both mode. Desired roommate
+// count is not a reservation for additional rooms at the same advertised price.
+const householdSize = (goal) => (goal.intent === "Home" || goal.housingType === "room" ? 1 : 1 + (goal.roommateCount || 1));
 const withinBudget = (listing, goal) =>
   listing.rentBasis === goal.budgetBasis || goal.budgetBasis === "person"
     ? listing.monthlyRent <= goal.budgetAmount

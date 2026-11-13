@@ -42,7 +42,9 @@ export async function getSetup(userId?: string) {
   const city = cat.cities.find((c) => same(c, profileCity)) ?? cat.cities[0] ?? profileCity ?? "";
   const inCity = cat.rows.filter((r) => same(r.city, city));
   const person = inCity.filter((r) => r.rent_basis === "person");
-  const basis = person.length * 2 >= inCity.length ? "person" : "home";
+  // The default is the searcher's own monthly share, independent of listing mix.
+  // Whole-home budgets remain an explicit intake choice.
+  const basis = "person";
   const rents = inCity.filter((r) => r.rent_basis === basis).map((r) => r.monthly_rent).sort((a, b) => a - b);
   const median = rents.length ? rents[Math.floor(rents.length / 2)] : 0;
   const start = new Date(), end = new Date(); end.setMonth(end.getMonth() + 3);

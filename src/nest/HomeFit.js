@@ -103,7 +103,7 @@ export default function HomeFit({ match, listing, goal, onCriteria }) {
                 Your limit: {money(goal.budgetAmount)}{" "}
                 {goal.budgetBasis === "person"
                   ? "per person"
-                  : "for the whole home"}
+                    : goal.housingType === "room" ? "for this room" : "for the whole home"}
               </Label>
             )}
           </View>
