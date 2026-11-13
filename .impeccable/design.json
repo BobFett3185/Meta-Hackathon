@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T07:53:49.693Z",
+  "title": "Design System: Facebook Nest",
+  "source": "src/nest/DESIGN.md",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "gallery",
+        "value": "0 4px 10px rgba(0,0,0,0.10)",
+        "purpose": "Web approximation of native shadow; Android elevation 3."
+      }
+    ],
+    "motion": [
+      {
+        "name": "gallery-settle",
+        "value": "spring(stiffness:270,damping:27)",
+        "purpose": "Interruptible selection settling from current visible position with stale-callback guards."
+      },
+      {
+        "name": "photo-flight",
+        "value": "300ms cubic-out",
+        "purpose": "Measured detail photo opening/reverse; skips changed or out-of-view original hero and reduced motion."
+      },
+      {
+        "name": "map-collapse",
+        "value": "220ms",
+        "purpose": "Map layout animation."
+      }
+    ],
+    "breakpoints": [],
+    "colorMeta": {
+      "map-water": {
+        "role": "illustration",
+        "displayName": "Aqua waterfront"
+      },
+      "map-land": {
+        "role": "illustration",
+        "displayName": "Cream land"
+      },
+      "map-park": {
+        "role": "illustration",
+        "displayName": "Green park"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Static web translation of native visual primitive; not native runtime evidence.",
+      "html": "<button class=\"ds-button\">Save profile</button>",
+      "css": ".ds-button{background:#0866FF;color:white;border:0;border-radius:16px;padding:10px 16px;min-height:48px;font:600 16px system-ui}.ds-button:active{background:#0757D9} :focus-visible{outline:2px solid #0866FF;outline-offset:3px} button:hover{opacity:.9}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "description": "Static web translation of native visual primitive; not native runtime evidence.",
+      "html": "<input class=\"ds-input\" aria-label=\"Introduction\" placeholder=\"Introduce yourself\">",
+      "css": ".ds-input{background:#F0F1F3;color:#16181C;border:0;border-radius:16px;padding:16px;font:16px system-ui} :focus-visible{outline:2px solid #0866FF;outline-offset:3px} button:hover{opacity:.9}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Static web translation of native visual primitive; not native runtime evidence.",
+      "html": "<nav><button class=\"ds-tab\">Homes</button></nav>",
+      "css": ".ds-tab{background:transparent;color:#0866FF;border:0;border-bottom:3px solid #0866FF;min-height:48px;font:700 16px system-ui} :focus-visible{outline:2px solid #0866FF;outline-offset:3px} button:hover{opacity:.9}"
+    },
+    {
+      "name": "Selection chip",
+      "kind": "chip",
+      "description": "Static web translation of native visual primitive; not native runtime evidence.",
+      "html": "<button class=\"ds-chip\">Periwinkle</button>",
+      "css": ".ds-chip{background:#EAF2FF;color:#16181C;border:0;border-radius:16px;padding:12px;font:16px system-ui} :focus-visible{outline:2px solid #0866FF;outline-offset:3px} button:hover{opacity:.9}"
+    },
+    {
+      "name": "Photo card",
+      "kind": "card",
+      "description": "Static web translation of native visual primitive; not native runtime evidence.",
+      "html": "<article class=\"ds-card\">South Lake Union</article>",
+      "css": ".ds-card{background:white;color:#16181C;border-radius:22px;padding:20px;box-shadow:0 4px 10px #0000001a;font:16px system-ui} :focus-visible{outline:2px solid #0866FF;outline-offset:3px} button:hover{opacity:.9}"
+    },
+    {
+      "name": "Illustrated neighborhood",
+      "kind": "custom",
+      "description": "Static schematic palette preview; sample positions, not geographic data.",
+      "html": "<div class=\"ds-map\"><div class=\"ds-water\"></div><div class=\"ds-park\"></div><button class=\"ds-pin\">$1,500</button><small>Illustrated neighborhood ? sample locations</small></div>",
+      "css": ".ds-map{position:relative;height:204px;overflow:hidden;border-radius:22px;background:#FFF5D9;font:14px system-ui}.ds-water{height:55px;background:#55CCE0;border-bottom:14px solid #8ECF7D}.ds-park{position:absolute;left:20px;top:100px;width:80px;height:50px;border-radius:16px;background:#74BE78}.ds-pin{position:absolute;top:100px;right:40px;background:#0866FF;color:white;border:0;border-radius:16px;padding:12px}.ds-pin:hover{opacity:.9}.ds-pin:focus-visible{outline:2px solid #16181C;outline-offset:3px}.ds-map small{position:absolute;bottom:8px;left:12px;color:#53666B}"
+    }
+  ],
+  "narrative": {
+    "overview": "Warm, minimal, welcoming, with Facebook blue actions and a periwinkle Squishy mascot.",
+    "dos": [
+      "Do show unknown evidence honestly and label icon-only actions."
+    ],
+    "donts": [
+      "Don't claim exact board fidelity, native accessibility validation, or completed motion targets without evidence."
+    ]
+  }
+}
