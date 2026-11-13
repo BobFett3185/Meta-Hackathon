@@ -25,7 +25,8 @@
     "test:roommates": "tsx --test services/roommates/match.test.ts",
     "roommates:demo": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-demo.mts",
     "roommates:watch": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-watch.mts",
-    "roommates:search": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-search.mts"
+    "roommates:search": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-search.mts",
+    "roommates:backfill-city": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-backfill-city.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
