@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { demoGoal, homes } from "./fixtures.js";
 import {
   evaluateHome,
+  isRoom,
   matchHomes,
   demoHomeMatches,
   selectedMatch,
@@ -147,4 +148,24 @@ test('Both keeps a single-room housing budget independent of desired roommates',
   assert.equal(matchHomes([room],{...goal,roommateCount:3}).length,1);
   assert.equal(matchHomes([{...room,monthlyRent:2200}],goal).length,0);
   assert.deepEqual(matchHomes(homes,goal).map(m=>m.listingId),matchHomes(homes,{...goal,intent:'Home'}).map(m=>m.listingId));
+});
+test("every listing is either a room or an entire home, so no filter choice hides a listing from both", () => {
+  const base = { ...homes[0], furnished: true, availableFrom: "2027-05-15", availableTo: "2027-08-31" };
+  const cases = [
+    { leaseType: "Private room", rentBasis: "person", room: true },
+    { leaseType: "Sublet", rentBasis: "person", room: true }, // e.g. "Point Grey room · $1,087/mo" typed as a sublet
+    { leaseType: "Apartment", rentBasis: "person", room: true },
+    { leaseType: "Sublet", rentBasis: "home", room: false },
+    { leaseType: "Apartment", rentBasis: "home", room: false },
+    { leaseType: "Lease takeover", rentBasis: "home", room: false },
+  ];
+  for (const c of cases) {
+    const listing = { ...base, id: c.leaseType + c.rentBasis, leaseType: c.leaseType, rentBasis: c.rentBasis, monthlyRent: 900 };
+    assert.equal(isRoom(listing), c.room, `${c.leaseType} per ${c.rentBasis}`);
+    const goal = { ...demoGoal, intent: "Home", budgetBasis: "person", budgetAmount: 1500, roommateCount: null, furnishedRequirement: false, startDate: "2027-06-01", endDate: "2027-08-01" };
+    const asRoom = matchHomes([listing], { ...goal, housingType: "room" }).length;
+    const asWhole = matchHomes([listing], { ...goal, housingType: "entire-home" }).length;
+    assert.equal(asRoom + asWhole, 1, `${c.leaseType} per ${c.rentBasis} must appear under exactly one choice`);
+    assert.equal(asRoom === 1, c.room);
+  }
 });
