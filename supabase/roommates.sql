@@ -68,3 +68,12 @@ create policy "demo update profiles"   on roommate_profiles for update using (tr
 create policy "read connections"       on roommate_connections for select using (true);
 create policy "demo write connections" on roommate_connections for insert with check (true);
 create policy "demo update connections" on roommate_connections for update using (true) with check (true);
+
+-- Remembers every roommate post the worker has judged, so rejected posts (no self-description) are not re-sent to Muse.
+create table if not exists roommate_post_checks (
+  post_id    uuid primary key references fb_posts(id) on delete cascade,
+  outcome    text not null check (outcome in ('profile', 'rejected')),
+  reason     text,
+  checked_at timestamptz not null default now()
+);
+alter table roommate_post_checks enable row level security;   -- service role only

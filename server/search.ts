@@ -3,6 +3,7 @@
 import { matchHomes } from "../src/nest/matching.js";
 import { adminDb, check } from "../services/ingestion/db";
 import { runIngestion } from "../services/ingestion/run";
+import { searchRoommates } from "../services/roommates/search";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,7 +68,8 @@ export async function search(goal: any, query?: string, userId?: string) {
   await ensureFresh();
   const d = await loadData();
   const homes = goal.intent === "Roommate" && goal.alreadyHasHome === false ? [] : matchHomes(d.listings, goal);
-  const roommates = roommateMatches(d.roommates, goal);
+  // Roommate matching lives in services/roommates; falls back to the simple filter if roommate_profiles is unavailable.
+  const roommates = await searchRoommates(goal).catch((e) => { console.warn("[roommates]", (e as Error).message); return roommateMatches(d.roommates, goal); });
   void logQuery({ userId, kind: "search", raw: query ?? goal.rawPrompt ?? "", goal, homes: homes.length, roommates: roommates.length });
   return { generatedAt: d.generatedAt, homes, roommates, considered: { listings: d.listings.length, roommates: d.roommates.length } };
 }

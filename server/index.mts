@@ -8,6 +8,7 @@ import { catalog, getSetup } from "./setup";
 import { runIngestion } from "../services/ingestion/run";
 import { adminDb, check } from "../services/ingestion/db";
 import { createPost } from "./posts";
+import { startRoommateWorker } from "../services/roommates/worker";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -63,6 +64,9 @@ if (every > 0) {
   tick();
   setInterval(tick, every * 60_000);
 }
+
+// Roommate profiles: same process as housing ingestion. Judges each new roommate post once (cheap when idle).
+startRoommateWorker();
 
 // Instant refresh: Supabase Realtime tells us the moment a post is inserted. Debounced so the post's images
 // (inserted just after it) exist before we read. The timer above stays as a safety net.

@@ -28,34 +28,48 @@ export async function buildRoommateProfiles({ write = false, reprocess = false, 
   // 2. skip posts that already have a profile (idempotent re-runs), unless reprocessing
   let done = new Set<string>();
   if (!reprocess && write) {
+    // already has a profile, or was judged before (rejected posts are remembered so Muse is not called again)
     const existing: any[] = check(await db.from("roommate_profiles").select("source_post_id").not("source_post_id", "is", null), "read profiles");
-    done = new Set(existing.map((r) => r.source_post_id));
+    const checked: any[] = check(await db.from("roommate_post_checks").select("post_id"), "read checks");
+    done = new Set([...existing.map((r) => r.source_post_id), ...checked.map((r) => r.post_id)]);
   }
   const todoIds = ids.filter((id) => !done.has(id)).slice(0, limit);
   const posts: any[] = [];
   for (let i = 0; i < todoIds.length; i += 100)
     posts.push(...check(await db.from("fb_posts").select("id,title,body,author_id,group_id,created_at").in("id", todoIds.slice(i, i + 100)), "read posts"));
 
-  // 3. extract + gate (Muse); transient failures are reported, not saved, so a re-run picks them up
-  const rows = await mapLimit(posts, concurrency, async (p): Promise<BuildRow & { post: any }> => {
-    const text = [p.title, p.body].filter(Boolean).join("\n");
-    const row = { postId: p.id, label: text.slice(0, 70).replace(/\n/g, " "), result: await extractProfile(text, new Date(p.created_at)), post: p };
-    onResult?.(row);
-    return row;
-  });
-
-  const accepted = rows.filter((r): r is typeof r & { result: { ok: true; profile: ProfileFields } } => r.result.ok);
+  // 3. extract + gate (Muse). Saved in small batches so a crash or slow Muse never loses finished work.
+  //    Transient failures are reported but not saved, so a re-run picks them up.
+  const rows: (BuildRow & { post: any })[] = [];
   let written = 0;
-  if (write && accepted.length) {
-    const postIds = accepted.map((r) => r.postId);
-    check(await db.from("roommate_profiles").delete().in("source_post_id", postIds), "reset profiles");
-    const data = accepted.map((r) => ({
-      ...r.result.profile, user_id: r.post.author_id, source: "post", source_post_id: r.post.id, source_group_id: r.post.group_id,
-      original_text: [r.post.title, r.post.body].filter(Boolean).join("\n"), extracted_by: "muse",
-    }));
-    check(await db.from("roommate_profiles").insert(data), "write profiles");
-    written = data.length;
+  const BATCH = 9;
+  for (let i = 0; i < posts.length; i += BATCH) {
+    const batch = await mapLimit(posts.slice(i, i + BATCH), concurrency, async (p): Promise<BuildRow & { post: any }> => {
+      const text = [p.title, p.body].filter(Boolean).join("\n");
+      const row = { postId: p.id, label: text.slice(0, 70).replace(/\n/g, " "), result: await extractProfile(text, new Date(p.created_at)), post: p };
+      onResult?.(row);
+      return row;
+    });
+    rows.push(...batch);
+    const ok = batch.filter((r): r is typeof r & { result: { ok: true; profile: ProfileFields } } => r.result.ok);
+    if (write && ok.length) {
+      check(await db.from("roommate_profiles").delete().in("source_post_id", ok.map((r) => r.postId)), "reset profiles");
+      const data = ok.map((r) => ({
+        ...r.result.profile, user_id: r.post.author_id, source: "post", source_post_id: r.post.id, source_group_id: r.post.group_id,
+        original_text: [r.post.title, r.post.body].filter(Boolean).join("\n"), extracted_by: "muse",
+      }));
+      check(await db.from("roommate_profiles").insert(data), "write profiles");
+      written += data.length;
+    }
+    if (write) {
+      // remember every final judgement; transient Muse failures are left out so they are retried
+      const judged = batch.filter((r) => r.result.ok || !r.result.retry).map((r) => ({
+        post_id: r.postId, outcome: r.result.ok ? "profile" : "rejected", reason: r.result.ok ? null : r.result.reason,
+      }));
+      if (judged.length) check(await db.from("roommate_post_checks").upsert(judged), "record checks");
+    }
   }
+  const accepted = rows.filter((r) => r.result.ok);
   return {
     candidates: posts.length, accepted: accepted.length, written,
     skipped: rows.filter((r) => !r.result.ok && !r.result.retry).length,
