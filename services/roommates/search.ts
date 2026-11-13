@@ -59,6 +59,8 @@ export async function searchRoommates(goal: any, limit = 5) {
       name: p.name ?? "Group member",
       photoUrl: r.user?.avatar_url ?? "",
       introduction: introduction(r),
+      occupation: r.occupation_or_school ?? null,   // used by the swipe cards
+      traits: r.other_traits ?? [],
       dates: [r.move_in ?? "", r.move_out ?? ""],
       budgetPerPerson: r.budget_basis === "person" ? r.budget_amount ?? 0 : 0,
       preferredAreas: r.areas ?? [],
@@ -73,7 +75,8 @@ export async function searchRoommates(goal: any, limit = 5) {
       sourceUrl: null,
       originalPostText: r.original_text ?? "",
       seekingRoommates: true,
-      // extra, ignored by the current UI: lets a screen show the pairing and the reason later
+      // extra fields used by the swipe cards
+      seeking: r.seeking,            // "has_room" | "needs_room": their situation
       pairing: ev!.kind,
       matchSummary: why.summary,
       matchSummaryBy: why.by,

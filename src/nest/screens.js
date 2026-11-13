@@ -25,8 +25,10 @@ import {
   dateRange,
 } from "./components";
 import CircularGallery from "./Gallery";
+import RoommateDeck from "./RoommateDeck";
 import HomePhoto from "./HomePhoto";
 import HomeFit from "./HomeFit";
+import {eventDate} from './event-utils.mjs';
 
 export function Welcome({ onAdd, onExample }) {
   return (
@@ -277,189 +279,28 @@ export function Roommates({
   onCriteria,
   onEdit,
 }) {
-  const person = people[0];
+  // Swipe deck: see RoommateDeck.js. The compact goal summary stays on top, as on the other tabs.
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <GoalSummary goal={goal} roommate onEdit={onEdit} />
-      <Label style={[ui.heading, { marginTop: 8, marginBottom: 24 }]}>
-        {person?.isDemoSample
-          ? "Meet sample roommates"
-          : "Your roommate matches"}
-      </Label>
-      {person?.isDemoSample && (
-        <Label style={[ui.secondary, { marginBottom: 16 }]}>
-          No exact matches in this demo. These sample profiles may not meet your
-          preferences.
-        </Label>
-      )}
-      {person ? (
-        <>
-          <View style={[ui.row, { alignItems: "flex-start", gap: 16 }]}>
-            <View>
-              <Image
-                source={imageSource(person.photoUrl)}
-                style={styles.roommatePhoto}
-              />
-              <View style={{ position: "absolute", right: -8, bottom: -8 }}>
-                <Mascot
-                  size={38}
-                  appearance={{ color: "seafoam", accessory: "leaf" }}
-                />
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={[ui.row, { justifyContent: "space-between" }]}>
-                <Label style={ui.heading}>{person.name}</Label>
-                <Bookmark
-                  saved={saved.includes(person.id)}
-                  onPress={() => onSave(person.id)}
-                />
-              </View>
-              <Label style={[ui.secondary, { marginBottom: 12 }]}>
-                {person.introduction}
-              </Label>
-              <Reasons criteria={person.criteria} />
-              <Link onPress={() => onCriteria(person.criteria)}>
-                See all criteria
-              </Link>
-            </View>
-          </View>
-          <Label style={[ui.secondary, { marginTop: 16, marginBottom: 12 }]}>
-            {person.sourceName} · Roommate post
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 20 }}>
+        <GoalSummary goal={goal} roommate onEdit={onEdit} />
+        {people[0]?.isDemoSample && (
+          <Label style={[ui.secondary, { marginBottom: 8 }]}>
+            No exact matches in this demo. These sample profiles may not meet
+            your preferences.
           </Label>
-          <Button onPress={() => onOpen(person)}>View profile</Button>
-          <View style={ui.divider} />
-          {people.slice(1).map((p) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View ${p.name}`}
-              key={p.id}
-              onPress={() => onOpen(p)}
-              style={[ui.row, { gap: 14, paddingVertical: 8 }]}
-            >
-              <Image
-                source={imageSource(p.photoUrl)}
-                style={{ width: 88, height: 88, borderRadius: 22 }}
-              />
-              <View style={{ flex: 1 }}>
-                <Label style={ui.heading}>{p.name}</Label>
-                <Label>{p.introduction}</Label>
-              </View>
-              <Icon name="chevron-forward" />
-            </Pressable>
-          ))}
-        </>
-      ) : (
-        <>
-          <Label>
-            {goal.intent === "Home"
-              ? "Your search is focused on homes. Choose Both to find roommates too."
-              : "No roommates meet your shared preferences."}
-          </Label>
-          <Link onPress={onEdit}>Edit search</Link>
-        </>
-      )}
-    </ScrollView>
-  );
-}
-export function Community({
-  area,
-  community,
-  onArea,
-  onInterests,
-  saved,
-  onSave,
-  onEvent,
-  onPerson,
-}) {
-  const event = community.events[0];
-  return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View
-        style={[
-          ui.row,
-          { justifyContent: "space-between", marginBottom: 16, marginTop: 4 },
-        ]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Choose neighborhood"
-          onPress={onArea}
-          style={[ui.row, { minHeight: 44, gap: 0 }]}
-        >
-          <Label style={{ fontWeight: "600" }}>{area}</Label>
-          <Icon name="chevron-down" size={17} />
-        </Pressable>
-        <Link onPress={onInterests}>Edit interests</Link>
+        )}
       </View>
-      <Label style={[ui.heading, { marginBottom: 12 }]}>
-        Around your neighborhood
-      </Label>
-      {event ? (
-        <>
-          <Image
-            source={imageSource(event.imageUrl)}
-            style={styles.eventPhoto}
-          />
-          <View style={[ui.row, { alignItems: "flex-start", marginTop: 8 }]}>
-            <View style={{ flex: 1 }}>
-              <Label style={ui.section}>{event.title}</Label>
-              <Label>Saturday · 10 AM</Label>
-            </View>
-            <Bookmark
-              saved={saved.events.includes(event.id)}
-              onPress={() => onSave("events", event.id)}
-            />
-          </View>
-          <Button style={{ marginTop: 12 }} onPress={() => onEvent(event)}>
-            View event
-          </Button>
-        </>
-      ) : (
-        <Label style={ui.secondary}>No events in this neighborhood yet.</Label>
-      )}
-      <Label style={[ui.heading, { marginTop: 24, marginBottom: 12 }]}>
-        People open to meeting up
-      </Label>
-      {community.people.map((p) => (
-        <Pressable
-          key={p.id}
-          accessibilityRole="button"
-          accessibilityLabel={`Meet ${p.name}`}
-          onPress={() => onPerson(p)}
-          style={[
-            ui.row,
-            {
-              paddingVertical: 12,
-              borderBottomWidth: 1,
-              borderColor: colors.divider,
-              gap: 14,
-            },
-          ]}
-        >
-          <Image source={imageSource(p.avatarUrl)} style={styles.avatar} />
-          <View style={{ flex: 1 }}>
-            <Label style={{ fontWeight: "700", fontSize: 18 }}>{p.name}</Label>
-            <Label style={{ fontSize: 14 }}>{p.introduction}</Label>
-            <Label style={[ui.secondary, { fontSize: 13 }]}>
-              {p.sourceName}
-            </Label>
-          </View>
-          <Icon name="chevron-forward" />
-        </Pressable>
-      ))}
-      {!community.people.length && (
-        <Label style={ui.secondary}>
-          No introductions match this area and your interests yet.
-        </Label>
-      )}
-    </ScrollView>
+      <RoommateDeck
+        goal={goal}
+        people={people}
+        saved={saved}
+        onSave={onSave}
+        onOpen={onOpen}
+        onCriteria={onCriteria}
+        onEdit={onEdit}
+      />
+    </View>
   );
 }
 export function HomeDetail({
@@ -589,7 +430,7 @@ export function HomeDetail({
               <Label style={{ fontWeight: "600", fontSize: 14 }}>
                 {event.title}
               </Label>
-              <Label style={ui.secondary}>Saturday morning</Label>
+              <Label style={ui.secondary}>{eventDate(event)}</Label>
             </View>
           </Pressable>
         )}
