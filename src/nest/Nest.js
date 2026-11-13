@@ -128,8 +128,8 @@ function NestScreen({ onExit }) {
     setStatus(refreshing ? "refresh" : "loading");
     try {
       const [homes, people] = await Promise.all([
-        nestService.getHomeMatches(search),
-        nestService.getRoommateMatches(search),
+        search.intent === "Roommate" ? [] : nestService.getHomeMatches(search),
+        search.intent === "Home" ? [] : nestService.getRoommateMatches(search),
       ]);
       if (version !== request.current) return;
       setMatches(homes);
@@ -220,7 +220,7 @@ function NestScreen({ onExit }) {
     setStore((s) => ({ ...s, goal: saved, draft: saved }));
     setDraft(saved);
     setIntake(null);
-    if (value.intent === "Roommate") setTab("Roommates");
+    setTab(value.intent === "Roommate" ? "Roommates" : "Homes");
     await fetchResults(saved);
   };
   const save = async (kind, id) => {
@@ -253,10 +253,13 @@ function NestScreen({ onExit }) {
   };
   const criteria = (items) => setSheet({ type: "criteria", items });
   const selected = selectedMatch(matches, store?.selectedId);
-  const onSelect = (id) =>
-    update({ selectedId: id }).catch(() =>
-      notify("Could not save your selection."),
-    );
+  const onSelect = (id) => {
+    // Selection paints immediately; device storage must never delay a swipe.
+    setStore((s) => ({ ...s, selectedId: id }));
+    nestService
+      .updateState({ selectedId: id })
+      .catch(() => notify("Could not save your selection."));
+  };
   const onHome = (neighborhood) => setSheet({ type: "home", neighborhood });
   const demo = async (name) => {
     setSheet(null);
