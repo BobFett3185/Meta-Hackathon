@@ -4,8 +4,10 @@ import { adminDb, check } from "../ingestion/db";
 import { evaluatePair, explain, plainSummary, type Explanation } from "./match";
 import type { Criterion, RoommateProfile } from "./types";
 
-const EXPLAIN_TOP = 2;          // Muse writes the reason for the best few only
-const EXPLAIN_TIMEOUT_MS = 8000; // a slow Muse call never holds up a search: fall back to the rule-based summary
+// Muse-written reasons add seconds to every search (its latency is high and shared), so they are OFF by default:
+// searches return instantly with the rule-based summary. Set ROOMMATE_MUSE_EXPLAIN=1 to turn them on.
+const EXPLAIN_TOP = process.env.ROOMMATE_MUSE_EXPLAIN === "1" ? 2 : 0;
+const EXPLAIN_TIMEOUT_MS = 8000; // when enabled, a slow Muse call still never holds a search past this: falls back to the rule-based summary
 
 /** The person searching, built from the intake form. Fields the form doesn't ask about stay "unknown". */
 export function goalToProfile(goal: any): RoommateProfile {
