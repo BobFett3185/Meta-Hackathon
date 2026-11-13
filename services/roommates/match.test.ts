@@ -41,3 +41,18 @@ test('findMatches drops hard conflicts, ranks fewer conflicts first, and never p
   assert.deepEqual(out.map((m) => m.profile.id), ['good', 'clash']);
   assert.equal(out[0].explanation.by, 'code');
 });
+test('a different city is a hard conflict even when neighborhoods are unspecified (the "California" bug)', async () => {
+  const me = P('me', { city: 'California', areas: [] });
+  assert.equal(status(evaluatePair(me, P('sea', { city: 'Seattle', areas: [] }))!, 'city'), 'conflict');
+  const out = await findMatches(me, [P('sea', { city: 'Seattle', areas: [] }), P('la', { city: 'California', areas: [] })], { useMuse: false });
+  assert.deepEqual(out.map((m) => m.profile.id), ['la']);
+});
+test('city comparison ignores case and ", WA"; a missing profile city is unknown, never a match', () => {
+  assert.equal(status(evaluatePair(P('a', { city: 'Seattle, WA' }), P('b', { city: 'seattle' }))!, 'city'), 'matched');
+  assert.equal(status(evaluatePair(P('a', { city: 'Seattle' }), P('b', { city: null }))!, 'city'), 'unknown');
+});
+test('neighborhoods are not compared across different cities', () => {
+  const ev = evaluatePair(P('a', { city: 'Seattle', areas: ['Ballard'] }), P('b', { city: 'Vancouver', areas: ['Kitsilano'] }))!;
+  assert.equal(ev.criteria.some((c) => c.id === 'area'), false);
+  assert.equal(ev.hardConflict, true);
+});

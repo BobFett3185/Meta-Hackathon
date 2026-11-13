@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { imageSource } from "./assets";
+import Squishy from "./Squishy";
+import { lightHaptic } from "./feedback";
 export const colors = {
   bg: "#FAF9F6",
   surface: "#FFFFFF",
@@ -108,79 +110,18 @@ export function Link({ children, onPress, style }) {
     </Pressable>
   );
 }
-export function Mascot({ size = 42, interactive = false }) {
-  const squish = useRef(new Animated.Value(0)).current;
+export function Mascot(props) {
   const reduced = useReducedMotion();
-  const press = (value) => {
-    if (reduced) return;
-    Animated.spring(squish, {
-      toValue: value,
-      stiffness: value ? 450 : 240,
-      damping: value ? 30 : 16,
-      mass: 0.5,
-      useNativeDriver: Platform.OS !== "web",
-    }).start();
-  };
-  const graphic = (
-    <Animated.View
-      style={{
-        transform: [
-          {
-            scaleX: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 1.12],
-            }),
-          },
-          {
-            scaleY: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 0.86],
-            }),
-          },
-          {
-            translateY: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, size * 0.06],
-            }),
-          },
-        ],
-      }}
-    >
-      <Image
-        source={require("./assets/mascot.png")}
-        resizeMode="stretch"
-        style={{
-          width: size * 1.65,
-          height: size * 1.15,
-          position: "absolute",
-          left: -size * 0.25,
-          top: -size * 0.06,
-        }}
-      />
-    </Animated.View>
-  );
-  if (interactive)
-    return (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Give Nest a squish"
-        onPressIn={() => press(1)}
-        onPressOut={() => press(0)}
-        style={{ width: size * 1.16, height: size }}
-      >
-        {graphic}
-      </Pressable>
-    );
-  return (
-    <View
-      accessible={false}
-      style={{ width: size * 1.16, height: size, overflow: "visible" }}
-    >
-      {graphic}
-    </View>
-  );
+  return <Squishy {...props} reduced={reduced} />;
 }
-export function Header({ onBack, title, onSaved, onDemo, children }) {
+export function Header({
+  onBack,
+  title,
+  onSaved,
+  onProfile,
+  onDemo,
+  children,
+}) {
   return (
     <View style={ui.header}>
       <IconAction
@@ -200,11 +141,11 @@ export function Header({ onBack, title, onSaved, onDemo, children }) {
       </View>
       <View style={{ flex: 1 }} />
       {children ||
-        (onSaved && (
+        ((onSaved || onProfile) && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Saved items"
-            onPress={onSaved}
+            accessibilityLabel={onProfile ? "Your Nest profile" : "Saved items"}
+            onPress={onProfile || onSaved}
             style={ui.iconAction}
           >
             <Mascot size={48} />
@@ -282,13 +223,34 @@ export function Sheet({ visible, onClose, title, children, footer }) {
   );
 }
 export function Bookmark({ saved, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const reduced = useReducedMotion();
   return (
-    <IconAction
-      name={saved ? "bookmark" : "bookmark-outline"}
-      label={saved ? "Unsave item" : "Save item"}
-      onPress={onPress}
-      color={saved ? colors.blue : colors.text}
-    />
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <IconAction
+        name={saved ? "bookmark" : "bookmark-outline"}
+        label={saved ? "Unsave item" : "Save item"}
+        onPress={() => {
+          lightHaptic(reduced);
+          if (!reduced)
+            Animated.sequence([
+              Animated.timing(scale, {
+                toValue: 0.8,
+                duration: 80,
+                useNativeDriver: true,
+              }),
+              Animated.spring(scale, {
+                toValue: 1,
+                stiffness: 320,
+                damping: 14,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          onPress();
+        }}
+        color={saved ? colors.blue : colors.text}
+      />
+    </Animated.View>
   );
 }
 export function Reasons({ criteria }) {
@@ -309,273 +271,7 @@ export function Reasons({ criteria }) {
     </View>
   );
 }
-// Real, pannable map drawn from raster tiles, so it works in Expo Go and on web without a native map SDK.
-// Pins sit at the coordinates Muse extracted, which are neighborhood-level, so the map says "approximate".
-const TILE = 256;
-const MIN_ZOOM = 9;
-const MAX_ZOOM = 17;
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const project = (lat, lng, zoom) => {
-  const n = TILE * 2 ** zoom;
-  const s = Math.sin((clamp(lat, -85, 85) * Math.PI) / 180);
-  return {
-    x: ((lng + 180) / 360) * n,
-    y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n,
-  };
-};
-const unproject = (x, y, zoom) => {
-  const n = TILE * 2 ** zoom;
-  return {
-    lng: (x / n) * 360 - 180,
-    lat: (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI,
-  };
-};
-const located = (m) => !!(m.listing.latitude && m.listing.longitude);
-/** The view that shows every located home with room for the pins and controls. */
-function fitView(matches, width, height) {
-  const pts = matches.filter(located).map((m) => project(m.listing.latitude, m.listing.longitude, 0));
-  if (!pts.length) return null;
-  const xs = pts.map((p) => p.x);
-  const ys = pts.map((p) => p.y);
-  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  const room = Math.min(
-    (width - 130) / Math.max(x1 - x0, 1e-9),
-    (height - 110) / Math.max(y1 - y0, 1e-9),
-  );
-  // A single home, or several at one spot, gets a neighborhood-level view instead of maximum zoom.
-  const zoom = clamp(Math.log2(Math.max(room, 1)), MIN_ZOOM, 15);
-  // Price labels sit above their point, so centre slightly high to keep the top label inside the map.
-  return { ...unproject((x0 + x1) / 2, (y0 + y1) / 2 - 12 / 2 ** zoom, 0), zoom };
-}
-export function MapAdapter({
-  matches,
-  selectedId,
-  onSelect,
-  expanded,
-  onExpand,
-}) {
-  const [size, setSize] = useState(null);
-  const [view, setViewState] = useState(null);
-  const viewRef = useRef(null);
-  const gesture = useRef(null);
-  const frame = useRef(null);
-  const setView = (next) => {
-    viewRef.current = next;
-    setViewState(next);
-  };
-  const animateTo = (target) => {
-    cancelAnimationFrame(frame.current);
-    const from = viewRef.current;
-    if (!from) return setView(target);
-    const started = Date.now();
-    const step = () => {
-      const p = Math.min(1, (Date.now() - started) / 220);
-      const e = 1 - (1 - p) ** 3;
-      setView({
-        lat: from.lat + (target.lat - from.lat) * e,
-        lng: from.lng + (target.lng - from.lng) * e,
-        zoom: from.zoom + (target.zoom - from.zoom) * e,
-      });
-      if (p < 1) frame.current = requestAnimationFrame(step);
-    };
-    step();
-  };
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
-  // Frame all results whenever the result set (or the map size) changes.
-  const ids = matches.map((m) => m.listingId).join("|");
-  useEffect(() => {
-    if (size) setView(fitView(matches, size.width, size.height));
-  }, [ids, size?.width, size?.height]);
-  // Bring a newly selected home into view if it is off-screen or under the controls.
-  useEffect(() => {
-    const v = viewRef.current;
-    const m = matches.find((x) => x.listingId === selectedId);
-    if (!v || !size || !m || !located(m)) return;
-    const c = project(v.lat, v.lng, v.zoom);
-    const p = project(m.listing.latitude, m.listing.longitude, v.zoom);
-    const x = p.x - c.x + size.width / 2;
-    const y = p.y - c.y + size.height / 2;
-    if (x < 40 || x > size.width - 60 || y < 30 || y > size.height - 30)
-      animateTo({ lat: m.listing.latitude, lng: m.listing.longitude, zoom: v.zoom });
-  }, [selectedId]);
-  const zoomBy = (delta) => {
-    const v = viewRef.current;
-    if (v) animateTo({ ...v, zoom: clamp(Math.round(v.zoom + delta), MIN_ZOOM, MAX_ZOOM) });
-  };
-  const recenter = () => {
-    const target = size && fitView(matches, size.width, size.height);
-    if (target) animateTo(target);
-  };
-  // One finger drags the map, two fingers pinch to zoom. Taps still reach the pins and buttons.
-  const pan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (e, g) =>
-        (e.nativeEvent.touches?.length || 1) > 1 || Math.abs(g.dx) + Math.abs(g.dy) > 6,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => {
-        cancelAnimationFrame(frame.current);
-        gesture.current = null;
-      },
-      onPanResponderMove: (e, g) => {
-        const current = viewRef.current;
-        if (!current) return;
-        const touches = e.nativeEvent.touches || [];
-        const fingers = touches.length > 1 ? 2 : 1;
-        const spread =
-          fingers === 2
-            ? Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY)
-            : 0;
-        let start = gesture.current;
-        // Re-anchor whenever a finger is added or lifted so the map never jumps.
-        if (!start || start.fingers !== fingers)
-          start = gesture.current = { fingers, dx: g.dx, dy: g.dy, spread, view: current };
-        const zoom =
-          fingers === 2 && start.spread
-            ? clamp(start.view.zoom + Math.log2(spread / start.spread), MIN_ZOOM, MAX_ZOOM)
-            : start.view.zoom;
-        const c = project(start.view.lat, start.view.lng, zoom);
-        setView({ ...unproject(c.x - (g.dx - start.dx), c.y - (g.dy - start.dy), zoom), zoom });
-      },
-      onPanResponderRelease: () => (gesture.current = null),
-      onPanResponderTerminate: () => (gesture.current = null),
-    }),
-  ).current;
-
-  const ready = size && view;
-  const tiles = [];
-  const pins = [];
-  if (ready) {
-    const { width, height } = size;
-    const z = clamp(Math.round(view.zoom), MIN_ZOOM, MAX_ZOOM);
-    const scale = 2 ** (view.zoom - z);
-    const c = project(view.lat, view.lng, z);
-    const count = 2 ** z;
-    for (let x = Math.floor((c.x - width / 2 / scale) / TILE); x <= Math.floor((c.x + width / 2 / scale) / TILE); x++)
-      for (let y = Math.floor((c.y - height / 2 / scale) / TILE); y <= Math.floor((c.y + height / 2 / scale) / TILE); y++) {
-        if (y < 0 || y >= count) continue;
-        const wrapped = ((x % count) + count) % count;
-        tiles.push({
-          key: `${z}/${x}/${y}`,
-          uri: `https://tile.openstreetmap.org/${z}/${wrapped}/${y}.png`,
-          left: width / 2 + (x * TILE - c.x) * scale,
-          top: height / 2 + (y * TILE - c.y) * scale,
-          size: TILE * scale + 0.5, // hairline overlap hides seams between tiles
-        });
-      }
-    const centre = project(view.lat, view.lng, view.zoom);
-    for (const m of matches.filter(located)) {
-      const p = project(m.listing.latitude, m.listing.longitude, view.zoom);
-      let x = p.x - centre.x + width / 2;
-      let y = p.y - centre.y + height / 2;
-      // Homes in one neighborhood share nearly the same point: spiral outwards until the price label is clear
-      // of the ones already placed, so each stays readable and tappable. Zooming in pulls them apart for real.
-      const ax = x;
-      const ay = y;
-      for (let k = 1; k < 40 && pins.some((o) => Math.abs(o.x - x) < 54 && Math.abs(o.y - y) < 26); k++) {
-        x = ax + Math.cos(k * 2.4) * 16 * Math.sqrt(k);
-        y = ay + Math.sin(k * 2.4) * 12 * Math.sqrt(k);
-      }
-      pins.push({ m, x, y });
-    }
-  }
-  const unlocated = matches.length - matches.filter(located).length;
-  const place = matches[0]?.listing.city && matches[0].listing.city !== "Unknown" ? matches[0].listing.city : "your area";
-  return (
-    <View
-      accessibilityLabel={`Map of homes in ${place}. Drag to move, pinch or use the buttons to zoom.`}
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        if (!size || size.width !== width || size.height !== height) setSize({ width, height });
-      }}
-      style={[ui.map, expanded && { height: 420 }]}
-      {...pan.panHandlers}
-    >
-      {tiles.map((t) => (
-        <Image
-          key={t.key}
-          source={{ uri: t.uri }}
-          fadeDuration={0}
-          style={{ position: "absolute", left: t.left, top: t.top, width: t.size, height: t.size }}
-        />
-      ))}
-      {pins.map(({ m, x, y }) => {
-        const active = selectedId === m.listingId;
-        return (
-          <Pressable
-            key={m.listingId}
-            accessibilityRole="button"
-            accessibilityLabel={`Map pin ${money(m.listing.monthlyRent)}, ${m.listing.neighborhood}`}
-            accessibilityState={{ selected: active }}
-            aria-pressed={active}
-            onPress={() => onSelect(m.listingId)}
-            style={{
-              position: "absolute",
-              left: x,
-              top: y,
-              zIndex: active ? 2 : 1,
-              transform: [{ translateX: -24 }, { translateY: -26 }],
-              minHeight: 44,
-              minWidth: 48,
-              alignItems: "center",
-            }}
-          >
-            <View style={[ui.pin, active && { backgroundColor: colors.blue }]}>
-              <Label
-                style={{
-                  fontSize: 13,
-                  lineHeight: 18,
-                  fontWeight: "700",
-                  color: active ? "#FFF" : colors.text,
-                }}
-              >
-                {money(m.listing.monthlyRent)}
-              </Label>
-            </View>
-            <View
-              style={{
-                width: 4,
-                height: 4,
-                borderRadius: 2,
-                backgroundColor: active ? colors.blue : colors.text,
-                marginTop: 2,
-              }}
-            />
-          </Pressable>
-        );
-      })}
-      <Label style={ui.mapCredit}>
-        {ready && !pins.length
-          ? "These posts don't say where the home is · "
-          : `Approximate locations${unlocated ? ` · ${unlocated} without a location` : ""} · `}
-        © OpenStreetMap contributors
-      </Label>
-      <View style={ui.mapControls}>
-        {onExpand && (
-          <MapButton name="expand-outline" label="Expand map" onPress={onExpand} style={{ marginBottom: 8 }} />
-        )}
-        <MapButton name="add" label="Zoom in" onPress={() => zoomBy(1)} disabled={!view || view.zoom >= MAX_ZOOM} style={ui.mapButtonTop} />
-        <MapButton name="remove" label="Zoom out" onPress={() => zoomBy(-1)} disabled={!view || view.zoom <= MIN_ZOOM} style={ui.mapButtonBottom} />
-        <MapButton name="locate-outline" label="Show all homes" onPress={recenter} style={{ marginTop: 8 }} />
-      </View>
-    </View>
-  );
-}
-function MapButton({ name, label, onPress, disabled, style }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={4}
-      style={({ pressed }) => [ui.mapButton, style, pressed && { backgroundColor: colors.input }]}
-    >
-      <Icon name={name} size={20} color={disabled ? "#B4B9C0" : colors.text} />
-    </Pressable>
-  );
-}
+export { default as MapAdapter } from "./NeighborhoodMap";
 export const ui = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 22, color: colors.text },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },

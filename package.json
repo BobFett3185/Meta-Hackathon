@@ -14,7 +14,8 @@
     "seed:expand": "node --env-file=.env scripts/expand-mock-data.cjs --apply",
     "db:inventory": "node --env-file=.env scripts/mock-db-inventory.cjs",
     "test:corpus": "node --test scripts/data/nest-corpus.test.cjs",
-    "test:nest": "node --test src/nest/matching.test.mjs",
+    "test:nest": "node --test src/nest/matching.test.mjs src/nest/profile.test.mjs",
+    "test:nest-ui": "node scripts/nest-personality.cjs",
     "capture:nest": "node scripts/nest-capture.cjs",
     "ingest": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/ingest.mts",
     "server": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.mts",
@@ -25,7 +26,8 @@
     "test:roommates": "tsx --test services/roommates/match.test.ts",
     "roommates:demo": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-demo.mts",
     "roommates:watch": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-watch.mts",
-    "roommates:search": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-search.mts"
+    "roommates:search": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-search.mts",
+    "roommates:backfill-city": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-backfill-city.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -33,10 +35,12 @@
     "@supabase/supabase-js": "^2.109.0",
     "expo": "~58.0.0",
     "expo-font": "~58.0.12",
+    "expo-haptics": "~58.0.8",
     "expo-status-bar": "~58.0.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-native": "^0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
     "react-native-web": "^0.21.4",
     "ws": "8.22.2"
   },

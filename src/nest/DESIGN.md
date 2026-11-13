@@ -12,6 +12,16 @@ colors:
   input: "#F0F1F3"
   selected: "#EAF2FF"
   unknown: "#996000"
+  mascot-periwinkle: "#AAA8ED"
+  mascot-rose: "#CFABCB"
+  mascot-seafoam: "#96BCC3"
+  map-land: "#FFF5D9"
+  map-water: "#55CCE0"
+  map-park: "#74BE78"
+  map-shoreline: "#8ECF7D"
+  map-block-peach: "#F5B7A1"
+  map-block-lavender: "#B5A9EF"
+  map-block-yellow: "#F4CF73"
   backdrop: "rgba(0,0,0,0.32)"
 typography:
   wordmark: { fontSize: "24px", lineHeight: "29px", fontWeight: 700 }
@@ -53,7 +63,7 @@ components:
 
 ## Overview
 
-This contract applies only to `src/nest`, preserving the incumbent Facebook shell. The user-approved boards and exact tokens in `frontendDevInstruction.md` govern the feature: warm, minimal, welcoming, with Facebook blue actions and a cream squishy mascot. Tokens above are normative; `px` represents React Native logical points here.
+This contract applies only to `src/nest`, preserving the incumbent Facebook shell. The user-approved boards and exact tokens in `frontendDevInstruction.md` govern the feature: warm, minimal, welcoming, with Facebook blue actions and a periwinkle Squishy mascot (the approved improvement plan supersedes the earlier cream direction). Tokens above are normative; `px` represents React Native logical points here.
 
 Keep the centered circular housing gallery, visible neighbors, and compact map as the signature composition. The interface is built from real controls. Generated local assets approximate the references; fidelity is not claimed to be pixel exact.
 
@@ -71,7 +81,7 @@ The gallery is a compact exception in the current implementation: centered price
 
 Use 20-point horizontal content padding, 24-point major section separation, and the declared spacing scale. The welcome screen currently uses 24-point inset and generous top space. Minimum interactive targets are 44×44; primary buttons are at least 48 high. Main tabs divide a 48-point row equally, using plain text with a centered 56×3 active underline. Detail pages use back navigation instead of the tabs.
 
-The housing gallery is centered with card width `min(250, containerWidth × .64)`. Neighbor cards use scale .84, horizontal offset of .64 card widths, gentle ±10° Y rotation and ±1.5° Z rotation. The five-fixture default shows both neighbors; one or two results reduce the visible card set. Arrow controls supplement swiping. Gallery and map share a listing ID. Compact map height is 150; expanded map is 420. Collapsing retains a map-return affordance on the same dashboard.
+The housing gallery is centered with card width `min(250, containerWidth × .64)`. Neighbor cards use scale .84, horizontal offset of .64 card widths, gentle ±10° Y rotation and ±1.5° Z rotation. The five-fixture default shows both neighbors; one or two results reduce the visible card set. Arrow controls supplement swiping. Gallery and map share a listing ID. Compact map height is 204; expanded map is 380. Match qualification appears above the map. Collapsing retains a map-return affordance on the same dashboard.
 
 One shared intake sheet handles writing and review for all intents. It scrolls, caps at 94% height, uses keyboard avoidance, and keeps its footer separate. Tab trees remain mounted to preserve scroll position when navigating away. Browser captures target 375- and 390-point widths; actual native keyboard and safe-area behavior require device verification.
 
@@ -81,17 +91,21 @@ Keep ordinary sections flat. Gallery shadow is black, opacity .10, radius 10, of
 
 ## Shapes
 
-Controls and inputs use the control radius, photos/gallery cards use the photo radius, and sheet top corners use the sheet radius. The map currently uses radius 20. The mascot is a cream pebble with two tiny eyes and a soft shadow, without a mouth or elaborate limbs; the local generated PNG is reusable at welcome and header scales. Do not use a presentation board as an image-backed interface.
+Controls and inputs use the control radius, photos/gallery cards use the photo radius, and sheet top corners use the sheet radius. The map uses radius 22. Squishy is a smiling periwinkle pebble with blueberry eyes and soft volume. Web uses the clean alpha cutout; native retains the approved original smiling asset. The shared component appears in welcome, header, intake, profile, and the selected map pin. Optional rose/seafoam tint overlays and headphones/leaf/coffee icon accessories are decorative, never matching evidence. Do not use a presentation board as an image-backed interface.
 
 ## Components
 
-**Header and tabs:** Facebook back action, Facebook icon, Nest wordmark, and small mascot/saved action. Main destinations are Homes, Roommates, Community. Active text is weight 700, inactive 500; no pill backgrounds. Demo controls remain behind a development-only wordmark long press.
+**Header and tabs:** Facebook back action, Facebook icon, Nest wordmark, and a mascot profile action. The mascot opens the profile editor; Saved is reached through its profile link. Main destinations are Homes, Roommates, Community. Active text is weight 700, inactive 500; no pill backgrounds. Demo controls remain behind a development-only wordmark long press.
 
 **Buttons and fields:** Real Pressables provide labels and press feedback. Primary actions use blue with white text; disabled actions dim. Inputs use soft gray fill and comfortable internal padding. Intake uses editable text rows for must-haves and preferences, with explicit budget basis. Review remains editable before confirmation.
 
-**Gallery and details:** The center card is dominant; neighboring cards are navigational previews. Source attribution remains visible. Detail pages separate known facts, evidence-backed reasons, and unknowns. Bookmark fill communicates saved state, with an undo notice. Saving and choosing a home area are distinct actions.
+**Gallery and details:** The center card is dominant; neighboring cards are navigational previews. Source attribution remains visible. HomeFit uses a small mascot beside the heading and full-width evidence rows. It labels sample results and mismatches explicitly, includes home-type/source constraints, and gathers unknowns under Still to confirm. See all criteria includes the complete constraints. HomePhoto shows loading feedback and a labeled Sample photo fallback on error or timeout. Bookmark fill communicates saved state, with an undo notice. Saving and choosing a home area are distinct actions.
 
-**Sheets and motion:** The specification targets approximately 250ms sheets, 150ms tab fades, and 220ms map collapse. Current sheets use native `slide` (no explicit duration); tab fades use 150ms, map layout animation uses 220ms, and gallery selection fades for 280ms. Reduced-motion queries disable these animations. No perpetual mascot animation or autoplay. Native timing and layout-animation behavior still need device validation.
+**Profile:** Preview and edit introduction, About me, and Looking for separately. Draft autosave and confirmed local save are distinct. Housing context comes from the goal; desired preferences are not personal traits. Private/discovery choices persist locally and do not publish a profile. Header Back and hardware Back use the same close handler, preserving the pending intake review path.
+
+**Map:** The approved illustrated neighborhood uses bright aqua waterfront, green shoreline and parks, cream land, peach/lavender/yellow blocks, and white roads. Blue identifies the selected price pin, with a Squishy guide attached. Pressing the guide opens a sheet with the selected home/neighborhood and a context-dependent Explore the map or View this home action. The expanded map includes a bottom photo/price/title/neighborhood preview. Preserve the explicit sample-location caption: this schematic has no geographic provider, coordinate-driven placement, or verified distance claims.
+
+**Sheets and motion:** The specification targets approximately 250ms sheets, 150ms tab fades, and 220ms map collapse. Current sheets use native `slide` (no explicit duration); tab fades use 150ms, map layout animation uses 220ms, and gallery cards follow the finger continuously, settling with stiffness 270 and damping 27. Spring settling is interruptible from its visible position; memoized animation slots, threshold-based stacking, and stale-callback guards preserve continuity on repeated drags. PhotoFlight uses a measured image overlay with 300ms cubic-out easing. Dismissal measures the current hero and skips the reverse flight when the original photo is changed or out of view. Each opening clears old transition references; map-opened details return to the map. Reduced motion bypasses the flight. Native-only haptics require device validation. Reduced-motion queries disable these animations. No perpetual mascot animation or autoplay. Native timing and layout-animation behavior still need device validation.
 
 ## Do's and Don'ts
 

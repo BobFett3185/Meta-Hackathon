@@ -31,12 +31,21 @@ function dates(a: RoommateProfile, b: RoommateProfile): Criterion {
   return start <= end ? crit("dates", "Your dates overlap", "matched", ev) : crit("dates", "Dates do not overlap", "conflict", ev);
 }
 
-const canon = (s: string) => s.toLowerCase().replace(/\bslu\b/, "south lake union").replace("cap hill", "capitol hill");
+const canon = (s: string) => s.toLowerCase().replace(/slu/, "south lake union").replace("cap hill", "capitol hill");
+/** "Seattle, WA" and "seattle" are the same city. */
+const cityKey = (s: string | null) => (s ?? "").split(",")[0].trim().toLowerCase();
+
+/** City is its own check: a different city is a hard conflict even when neighborhoods are unspecified. */
+function city(a: RoommateProfile, b: RoommateProfile): Criterion | null {
+  const ca = cityKey(a.city), cb = cityKey(b.city);
+  if (!ca && !cb) return null;
+  if (!ca || !cb) return crit("city", "City", "unknown", "One of you did not name a city");
+  return ca === cb ? crit("city", "Same city", "matched", b.city ?? "")
+    : crit("city", "Different cities", "conflict", `${a.city} vs ${b.city}`);
+}
+
 function area(a: RoommateProfile, b: RoommateProfile): Criterion {
-  if (!a.areas.length || !b.areas.length) {
-    if (a.city && b.city && a.city.toLowerCase() !== b.city.toLowerCase()) return crit("area", "Different cities", "conflict", `${a.city} vs ${b.city}`);
-    return crit("area", "Area", "unknown", "One of you did not name a neighborhood");
-  }
+  if (!a.areas.length || !b.areas.length) return crit("area", "Area", "unknown", "One of you did not name a neighborhood");
   const mine = a.areas.map(canon);
   const shared = b.areas.filter((x) => mine.includes(canon(x)));
   return shared.length ? crit("area", "Same neighborhood", "matched", shared.join(", "))
@@ -83,11 +92,14 @@ export interface PairEvaluation { kind: PairKind; criteria: Criterion[]; conflic
 export function evaluatePair(a: RoommateProfile, b: RoommateProfile): PairEvaluation | null {
   const kind = pairing(a, b);
   if (!kind) return null;
-  const criteria = [budget(a, b), dates(a, b), area(a, b), ...lifestyle(a, b)];
+  const cityCrit = city(a, b);
+  // neighborhoods only mean something inside the same city
+  const areaCrit = cityCrit?.status === "conflict" ? null : area(a, b);
+  const criteria = [budget(a, b), dates(a, b), ...(cityCrit ? [cityCrit] : []), ...(areaCrit ? [areaCrit] : []), ...lifestyle(a, b)];
   const count = (s: Criterion["status"]) => criteria.filter((c) => c.status === s).length;
   return {
     kind, criteria, conflicts: count("conflict"), matched: count("matched"), unknown: count("unknown"),
-    hardConflict: criteria.some((c) => ["budget", "dates", "area"].includes(c.id) && c.status === "conflict"),
+    hardConflict: criteria.some((c) => ["budget", "dates", "city", "area"].includes(c.id) && c.status === "conflict"),
   };
 }
 

@@ -1,0 +1,8 @@
+{
+  "asset": "squishy-periwinkle.png",
+  "source": "Built-in image_gen edit of the existing mascot.png",
+  "date": "2026-11-12",
+  "transparentBackground": true,
+  "prompt": "Edit this exact Nest squishy mascot into a soft periwinkle body (#AAA8ED midtone) with deep blueberry oval eyes (#303565). Preserve its exact rounded soft pebble silhouette, tiny two eyes, soft dimensional clay shading, no mouth and no limbs. Remove the three floating black accent strokes so expressions can be added by UI. Transparent background with only a small subtle contact shadow, no glow haze. Center complete mascot in square canvas with modest 10 percent clear padding. This is a production mobile app mascot asset; no text, no extra elements. Save generated asset and report local file path if supported.",
+  "runtimeVariants": "Rose and seafoam use a subtle React Native tint overlay; accessories use the existing Ionicons library. No matching traits are inferred from appearance."
+}

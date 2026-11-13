@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { imageSource } from "./assets";
 import {
   View,
@@ -25,6 +25,8 @@ import {
   dateRange,
 } from "./components";
 import CircularGallery from "./Gallery";
+import HomePhoto from "./HomePhoto";
+import HomeFit from "./HomeFit";
 
 export function Welcome({ onAdd, onExample }) {
   return (
@@ -130,20 +132,50 @@ export function Homes({
         showsVerticalScrollIndicator={false}
       >
         <GoalSummary goal={goal} onEdit={onEdit} onSettings={onSettings} />
-        <Label style={ui.section}>{current?.isDemoSample ? "Sample homes" : "Your housing matches"}</Label>
+        <Label style={ui.section}>
+          {current?.isDemoSample ? "Sample homes" : "Your housing matches"}
+        </Label>
         {current?.isDemoSample && (
           <Label style={ui.secondary}>
-            No exact matches in this demo. Explore these sample homes; your search preferences are unchanged.
+            No exact matches in this demo. Explore these sample homes; your
+            search preferences are unchanged.
           </Label>
         )}
         {(status === "loading" || status === "refresh") && (
           <View style={[ui.row, { marginVertical: 16 }]}>
-            <ActivityIndicator color={colors.blue} />
+            <Mascot size={46} mood="thinking" />
             <Label>
               {status === "refresh"
                 ? "Refreshing results…"
                 : "Finding your matches…"}
             </Label>
+          </View>
+        )}
+        {status === "loading" && !current && (
+          <View
+            accessibilityLabel="Loading housing cards"
+            style={{
+              height: 260,
+              flexDirection: "row",
+              gap: 12,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {[0, 1, 2].map((i) => (
+              <View
+                key={i}
+                style={{
+                  width: i === 1 ? "58%" : "18%",
+                  height: i === 1 ? 240 : 198,
+                  borderRadius: 22,
+                  backgroundColor: "#EAE8EF",
+                  transform: [
+                    { rotate: i === 0 ? "-3deg" : i === 2 ? "3deg" : "0deg" },
+                  ],
+                }}
+              />
+            ))}
           </View>
         )}
         {status === "refresh" && updatedAt && (
@@ -169,6 +201,7 @@ export function Homes({
         )}
         {!current && status !== "loading" && status !== "error" && (
           <View style={{ paddingVertical: 32 }}>
+            <Mascot size={64} mood="curious" />
             <Label>
               {goal.intent === "Roommate"
                 ? "Your search is focused on roommates. Choose Both to look for a home too."
@@ -252,15 +285,31 @@ export function Roommates({
     >
       <GoalSummary goal={goal} roommate onEdit={onEdit} />
       <Label style={[ui.heading, { marginTop: 8, marginBottom: 24 }]}>
-        Your roommate matches
+        {person?.isDemoSample
+          ? "Meet sample roommates"
+          : "Your roommate matches"}
       </Label>
+      {person?.isDemoSample && (
+        <Label style={[ui.secondary, { marginBottom: 16 }]}>
+          No exact matches in this demo. These sample profiles may not meet your
+          preferences.
+        </Label>
+      )}
       {person ? (
         <>
           <View style={[ui.row, { alignItems: "flex-start", gap: 16 }]}>
-            <Image
-              source={imageSource(person.photoUrl)}
-              style={styles.roommatePhoto}
-            />
+            <View>
+              <Image
+                source={imageSource(person.photoUrl)}
+                style={styles.roommatePhoto}
+              />
+              <View style={{ position: "absolute", right: -8, bottom: -8 }}>
+                <Mascot
+                  size={38}
+                  appearance={{ color: "seafoam", accessory: "leaf" }}
+                />
+              </View>
+            </View>
             <View style={{ flex: 1 }}>
               <View style={[ui.row, { justifyContent: "space-between" }]}>
                 <Label style={ui.heading}>{person.name}</Label>
@@ -415,6 +464,7 @@ export function Community({
 }
 export function HomeDetail({
   listing,
+  goal,
   match,
   event,
   saved,
@@ -425,12 +475,22 @@ export function HomeDetail({
   onEvent,
   onContact,
   onHome,
+  onHeroReady,
+  hideHero,
 }) {
   const [photo, setPhoto] = useState(0);
   const [width, setWidth] = useState(350);
+  const hero = useRef(null);
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Your matches" onBack={onBack}>
+      <Header
+        title="Your matches"
+        onBack={() =>
+          hero.current?.measureInWindow((x, y, width, height) =>
+            onBack({ rect: { x, y, width, height }, index: photo }),
+          )
+        }
+      >
         {<Bookmark saved={saved} onPress={onSave} />}
       </Header>
       <ScrollView
@@ -438,8 +498,19 @@ export function HomeDetail({
         showsVerticalScrollIndicator={false}
       >
         <View
-          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-          style={{ borderRadius: 22, overflow: "hidden" }}
+          ref={hero}
+          onLayout={(e) => {
+            setWidth(e.nativeEvent.layout.width);
+            if (onHeroReady)
+              hero.current?.measureInWindow((x, y, width, height) =>
+                onHeroReady({ x, y, width, height }),
+              );
+          }}
+          style={{
+            borderRadius: 22,
+            overflow: "hidden",
+            opacity: hideHero ? 0 : 1,
+          }}
         >
           <ScrollView
             horizontal
@@ -450,11 +521,7 @@ export function HomeDetail({
             }
           >
             {listing.photoUrls.map((uri, i) => (
-              <Image
-                key={i}
-                source={imageSource(uri)}
-                style={{ width, height: 220 }}
-              />
+              <HomePhoto key={i} uri={uri} style={{ width, height: 220 }} />
             ))}
           </ScrollView>
           <View style={styles.photoCount}>
@@ -477,21 +544,12 @@ export function HomeDetail({
         <Label style={[ui.secondary, { fontSize: 16, marginTop: 2 }]}>
           {listing.leaseType} · {dateRange(listing.availableFrom, listing.availableTo)}
         </Label>
-        <View
-          style={[ui.row, { alignItems: "flex-start", marginTop: 20, gap: 16 }]}
-        >
-          <Mascot size={48} />
-          <View style={{ flex: 1 }}>
-            <Label style={[ui.section, { marginBottom: 8 }]}>{match?.isDemoSample ? "Sample home · check your criteria" : "Why it fits"}</Label>
-            <Reasons criteria={match?.criteria || []} />
-            <Link onPress={() => onCriteria(match?.criteria || [])}>
-              See all criteria
-            </Link>
-          </View>
-        </View>
-        <Label style={{ color: colors.unknown, fontSize: 14, marginTop: 4 }}>
-          Utilities and deposit need confirmation
-        </Label>
+        <HomeFit
+          match={match}
+          listing={listing}
+          goal={goal}
+          onCriteria={onCriteria}
+        />
         <View
           style={[
             ui.row,
@@ -582,9 +640,22 @@ export function PersonDetail({
             <Label style={{ marginTop: 8 }}>
               {person.explicitLivingPreferences.join(" · ")}
             </Label>
-            <Label style={[ui.section, { marginTop: 24, marginBottom: 12 }]}>
-              Why it fits
-            </Label>
+            <View
+              style={[ui.row, { marginTop: 24, marginBottom: 12, gap: 16 }]}
+            >
+              <Mascot size={48} />
+              <Icon name="swap-horizontal" size={18} color="#7775B4" />
+              <Mascot
+                size={48}
+                appearance={{
+                  color: person.id === "alex" ? "seafoam" : "rose",
+                  accessory: person.id === "alex" ? "leaf" : "coffee",
+                }}
+              />
+              <Label style={[ui.section, { flex: 1 }]}>
+                {person.isDemoSample ? "Compare preferences" : "What you share"}
+              </Label>
+            </View>
             <Reasons criteria={person.criteria || []} />
             <Link onPress={() => onCriteria(person.criteria || [])}>
               See all criteria

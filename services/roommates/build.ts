@@ -38,6 +38,13 @@ export async function buildRoommateProfiles({ write = false, reprocess = false, 
   for (let i = 0; i < todoIds.length; i += 100)
     posts.push(...check(await db.from("fb_posts").select("id,title,body,author_id,group_id,created_at").in("id", todoIds.slice(i, i + 100)), "read posts"));
 
+  // The shared ingestion already infers each post's city from neighborhood/group (Muse). Use it: our extractor
+  // is told never to guess, so it leaves most cities blank, and a blank city would match any search.
+  const analyses = new Map<string, any>();
+  for (let i = 0; i < todoIds.length; i += 100)
+    for (const r of check(await db.from("nest_ingested_posts").select("post_id,analysis").in("post_id", todoIds.slice(i, i + 100)), "read analysis") as any[])
+      analyses.set(r.post_id, r.analysis);
+
   // 3. extract + gate (Muse). Saved in small batches so a crash or slow Muse never loses finished work.
   //    Transient failures are reported but not saved, so a re-run picks them up.
   const rows: (BuildRow & { post: any })[] = [];
@@ -55,7 +62,7 @@ export async function buildRoommateProfiles({ write = false, reprocess = false, 
     if (write && ok.length) {
       check(await db.from("roommate_profiles").delete().in("source_post_id", ok.map((r) => r.postId)), "reset profiles");
       const data = ok.map((r) => ({
-        ...r.result.profile, user_id: r.post.author_id, source: "post", source_post_id: r.post.id, source_group_id: r.post.group_id,
+        ...r.result.profile, city: analyses.get(r.post.id)?.housing?.city ?? r.result.profile.city, user_id: r.post.author_id, source: "post", source_post_id: r.post.id, source_group_id: r.post.group_id,
         original_text: [r.post.title, r.post.body].filter(Boolean).join("\n"), extracted_by: "muse",
       }));
       check(await db.from("roommate_profiles").insert(data), "write profiles");

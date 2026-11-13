@@ -122,3 +122,62 @@ export function toggleSaved(saved, kind, id) {
 export function selectedMatch(matches, id) {
   return matches.find((m) => m.listingId === id) || matches[0] || null;
 }
+
+export function demoRoommateMatches(people, goal) {
+  if (goal.intent === "Home") return [];
+  const rows = people
+    .filter((p) => p.seekingRoommates)
+    .map((p) => {
+      const criterion = (id, label, matched, evidence) => ({
+        criterionId: id,
+        label,
+        status:
+          matched === null ? "unknown" : matched ? "matched" : "not-matched",
+        evidence,
+        explanation: evidence,
+      });
+      return {
+        ...p,
+        criteria: [
+          criterion(
+            "dates",
+            "Your dates overlap",
+            p.dates[0] <= goal.endDate && p.dates[1] >= goal.startDate,
+            `${p.dates[0]} to ${p.dates[1]}`,
+          ),
+          criterion(
+            "budget",
+            "Similar housing budget",
+            goal.budgetBasis === "person" &&
+              p.budgetPerPerson <= goal.budgetAmount,
+            `$${p.budgetPerPerson} per person`,
+          ),
+          criterion(
+            "area",
+            "Shared preferred neighborhood",
+            p.preferredAreas.some((a) =>
+              goal.preferredNeighborhoods.includes(a),
+            ),
+            p.preferredAreas.join(", "),
+          ),
+          criterion(
+            "quiet",
+            "Also prefers a quiet home",
+            goal.preferences.includes("Quiet home") &&
+              p.explicitLivingPreferences.includes("Quiet home")
+              ? true
+              : null,
+            p.originalPostText,
+          ),
+        ],
+      };
+    });
+  const exact = rows.filter(
+    (p) =>
+      goal.sourceIds.includes("interns") &&
+      p.criteria.slice(0, 3).every((c) => c.status === "matched"),
+  );
+  return (
+    exact.length ? exact : rows.map((p) => ({ ...p, isDemoSample: true }))
+  ).slice(0, goal.maxResults);
+}
