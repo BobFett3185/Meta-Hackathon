@@ -9,10 +9,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "seed": "node --env-file=.env scripts/seed.js"
+    "seed": "node --env-file=.env scripts/seed.js",
+    "test:nest": "node --test src/nest/matching.test.mjs",
+    "capture:nest": "node scripts/nest-capture.cjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.109.0",
     "expo": "~58.0.0",
     "expo-font": "~58.0.12",
@@ -27,7 +30,8 @@
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.3",
     "@types/react": "~19.3.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "@playwright/test": "^1.65.0"
   },
   "private": true
 }

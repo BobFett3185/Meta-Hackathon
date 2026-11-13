@@ -1,0 +1,47 @@
+{
+  "note": "Recreated demo assets based on supplied design descriptions; not original reference assets. People and property imagery are illustrative.",
+  "assets": [
+    {
+      "name": "alex",
+      "prompt": "Photorealistic portrait photo for fictional roommate profile: friendly smiling East Asian adult man age 23, medium length gently wavy dark hair parted loosely, cream t-shirt, olive backpack straps over shoulders, sunny outdoor park blurred green leaves background. Chest up, looking into camera, warm natural daylight, relaxed candid smile with teeth. Portrait 3:4, no text or borders.",
+      "method": "Built-in image_gen",
+      "file": "alex.png"
+    },
+    {
+      "name": "jordan",
+      "prompt": "Photorealistic portrait photo for fictional roommate profile: friendly smiling adult woman age 24 with shoulder length wavy brown hair and light olive complexion, casual pale teal shirt with burgundy backpack straps, leafy outdoor park blurred background. Chest up facing camera, cheerful natural candid smile, warm daylight. Portrait 3:4, no text or borders.",
+      "method": "Built-in image_gen",
+      "file": "jordan.png"
+    },
+    {
+      "name": "maya",
+      "prompt": "Photorealistic portrait photo for fictional community profile: smiling adult East Asian woman age 24 with shoulder length dark hair, casual cream top, blurred sunny green park background, head and shoulders, facing camera, warm friendly candid expression. Square photo, no text no borders.",
+      "method": "Built-in image_gen",
+      "file": "maya.png"
+    },
+    {
+      "name": "leo",
+      "prompt": "Photorealistic portrait photo for fictional community profile: smiling adult man age 25 with curly medium length brown hair and light stubble, casual forest green t-shirt, blurred green sunny park background, head and shoulders facing camera. Relaxed warm friendly candid photo. Square photo, no text no borders.",
+      "method": "Built-in image_gen",
+      "file": "leo.png"
+    },
+    {
+      "name": "bedroom",
+      "file": "bedroom.png",
+      "method": "Built-in image_gen",
+      "prompt": "Generate a single photorealistic landscape image asset for a housing app, no interface, no text. Match this exact approved composition: inviting sunny modest bedroom, creamy pale yellow walls, large white multi-pane window on LEFT wall with green trees outdoors, warm sunlight, low honey-oak dresser with a potted plant in lower left, double bed with fluffy white duvet at center-right, beige upholstered headboard against right wall, small wooden bedside table and warm cream lamp at far right. Camera from room corner, landscape 3:2, bed and window fill frame. Warm light airy premium realistic photography, not dark luxury hotel. Do not add people or watermarks."
+    },
+    {
+      "name": "market",
+      "file": "market.png",
+      "method": "Built-in image_gen",
+      "prompt": "Generate a single photorealistic landscape image asset of a neighborhood farmers market to match this exact composition: white canopy tents receding from foreground left to back right along a sunny pedestrian street, fresh vegetables and flowers at stall in foreground left, a handful of casually dressed adult shoppers walking away along open path on right, leafy green trees above and modern Seattle neighborhood buildings subtly behind. Natural bright summer morning, warm inviting colors. Landscape 2:1 crop. Not a close-up pile of vegetables. No text, no interface, no watermarks."
+    },
+    {
+      "name": "mascot",
+      "file": "mascot.png",
+      "method": "Built-in image_gen",
+      "prompt": "Create a transparent-background 3D soft squishy mascot asset. A small cream-colored rounded pebble, broad base, slightly asymmetric domed top, like soft mochi, with exactly two tiny vertical black oval eyes near center and NO mouth, NO limbs, NO accessories. Pale cream upper left, gentle warm buttery shading toward lower right, softly flattened base and soft shadow immediately beneath. Three tiny black handdrawn attention strokes just above upper right of head. Centered, clean transparent margins, front view. Warm minimal polished consumer app mascot. No text."
+    }
+  ]
+}
