@@ -26,7 +26,7 @@ const IMG = {
   apt3: 'https://ovationseattle.com/assets/images/cache/Ovation-45-0311420ef38a750898213da0f544a477.jpg',
   shelf: ux('photo-1555041469-a586c61ea9bc'),
   bundle: ux('photo-1523381210434-271e8be1f52b'),
-  paddle: ux('photo-1615065820499-57d11d2b607c'),
+  paddle: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/A_pickleball_paddle_with_two_pickleballs.jpg/960px-A_pickleball_paddle_with_two_pickleballs.jpg', // replaced: the old Unsplash photo now 404s
   bed: ux('photo-1505693416388-ac5ce068fe85'),
   lamp: ux('photo-1513506003901-1e6a229e2d15'),
   reel: ux('photo-1519608487953-e999c86e7455', 1000),

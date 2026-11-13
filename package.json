@@ -20,7 +20,12 @@
     "server": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.mts",
     "dump-posts": "node scripts/dump-posts.cjs",
     "demo:post": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/demo-post.mts",
-    "dev": "node scripts/dev.cjs"
+    "dev": "node scripts/dev.cjs",
+    "roommates": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates.mts",
+    "test:roommates": "tsx --test services/roommates/match.test.ts",
+    "roommates:demo": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-demo.mts",
+    "roommates:watch": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-watch.mts",
+    "roommates:search": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/roommates-search.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
