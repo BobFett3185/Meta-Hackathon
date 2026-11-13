@@ -10,7 +10,7 @@ import type { Criterion, RoommateProfile } from "./types";
 const BUDGET_SLACK = 0.15; // within 15% still counts as workable
 const crit = (id: string, label: string, status: Criterion["status"], evidence: string): Criterion => ({ id, label, status, evidence });
 
-function budget(a: RoommateProfile, b: RoommateProfile): Criterion {
+function budget(a: RoommateProfile, b: RoommateProfile, maximum = false): Criterion {
   if (!a.budget_amount || !b.budget_amount) return crit("budget", "Budget", "unknown", "One of you did not state a budget");
   if (a.budget_basis !== b.budget_basis)
     return crit("budget", "Budget", "unknown",
@@ -19,6 +19,9 @@ function budget(a: RoommateProfile, b: RoommateProfile): Criterion {
         : "One amount is per person and the other is for the whole home");
   const [lo, hi] = [a.budget_amount, b.budget_amount].sort((x, y) => x - y);
   const ev = `$${a.budget_amount} vs $${b.budget_amount} ${a.budget_basis === "person" ? "per person" : "total"}`;
+  if (maximum) return b.budget_amount <= a.budget_amount
+    ? crit("budget", "Within your budget", "matched", ev)
+    : crit("budget", "Above your budget", "conflict", ev);
   return (hi - lo) / hi <= BUDGET_SLACK ? crit("budget", "Similar budgets", "matched", ev) : crit("budget", "Budgets differ a lot", "conflict", ev);
 }
 
@@ -89,13 +92,13 @@ export function pairing(a: RoommateProfile, b: RoommateProfile): PairKind | null
 
 export interface PairEvaluation { kind: PairKind; criteria: Criterion[]; conflicts: number; matched: number; unknown: number; hardConflict: boolean }
 
-export function evaluatePair(a: RoommateProfile, b: RoommateProfile): PairEvaluation | null {
+export function evaluatePair(a: RoommateProfile, b: RoommateProfile, { budgetIsMaximum = false } = {}): PairEvaluation | null {
   const kind = pairing(a, b);
   if (!kind) return null;
   const cityCrit = city(a, b);
   // neighborhoods only mean something inside the same city
   const areaCrit = cityCrit?.status === "conflict" ? null : area(a, b);
-  const criteria = [budget(a, b), dates(a, b), ...(cityCrit ? [cityCrit] : []), ...(areaCrit ? [areaCrit] : []), ...lifestyle(a, b)];
+  const criteria = [budget(a, b, budgetIsMaximum), dates(a, b), ...(cityCrit ? [cityCrit] : []), ...(areaCrit ? [areaCrit] : []), ...lifestyle(a, b)];
   const count = (s: Criterion["status"]) => criteria.filter((c) => c.status === s).length;
   return {
     kind, criteria, conflicts: count("conflict"), matched: count("matched"), unknown: count("unknown"),

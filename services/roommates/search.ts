@@ -46,7 +46,7 @@ export async function searchRoommates(goal: any, limit = 5) {
   const scored = rows
     .filter((r) => !sources.length || !r.source_group_id || sources.includes(r.source_group_id))
     .map((r) => ({ r, p: { ...r, name: r.user?.name ?? "Group member" } as RoommateProfile }))
-    .map((x) => ({ ...x, ev: evaluatePair(me, x.p) }))
+    .map((x) => ({ ...x, ev: evaluatePair(me, x.p, { budgetIsMaximum: true }) }))
     .filter((x) => x.ev && !x.ev.hardConflict)
     .sort((a, b) => a.ev!.conflicts - b.ev!.conflicts || b.ev!.matched - a.ev!.matched || a.ev!.unknown - b.ev!.unknown)
     .slice(0, limit);

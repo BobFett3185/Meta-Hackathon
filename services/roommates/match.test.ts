@@ -9,6 +9,19 @@ const base = { user_id: 'u', name: 'X', seeking: 'needs_room', city: 'Seattle', 
 const P = (id, o = {}) => ({ ...base, id, user_id: id, name: id, ...o });
 const status = (ev, id) => ev.criteria.find((c) => c.id === id)?.status;
 
+test('search budget is a maximum: lower budgets remain eligible, higher budgets do not', () => {
+  const me = P('me', { budget_amount: 2150 });
+  const lower = evaluatePair(me, P('lower', { budget_amount: 1400 }), { budgetIsMaximum: true });
+  assert.equal(status(lower, 'budget'), 'matched');
+  assert.equal(lower.hardConflict, false);
+  assert.equal(status(evaluatePair(me, P('equal', { budget_amount: 2150 }), { budgetIsMaximum: true }), 'budget'), 'matched');
+  assert.equal(evaluatePair(me, P('higher', { budget_amount: 2200 }), { budgetIsMaximum: true }).hardConflict, true);
+  assert.equal(status(evaluatePair(me, P('unknown', { budget_amount: null }), { budgetIsMaximum: true }), 'budget'), 'unknown');
+  assert.equal(status(evaluatePair(me, P('home', { budget_basis: 'home' }), { budgetIsMaximum: true }), 'budget'), 'unknown');
+  assert.equal(evaluatePair(me, P('elsewhere', { city: 'Vancouver' }), { budgetIsMaximum: true }).hardConflict, true);
+  assert.equal(evaluatePair(me, P('later', { move_in: '2027-09-01' }), { budgetIsMaximum: true }).hardConflict, true);
+});
+
 test('two seekers form a household; a has_room + seeker fills a room; two has_room never pair', () => {
   assert.equal(evaluatePair(P('a'), P('b')).kind, 'household');
   assert.equal(evaluatePair(P('a'), P('b', { seeking: 'has_room' })).kind, 'fill_room');
