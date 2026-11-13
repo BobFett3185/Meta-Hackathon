@@ -29,6 +29,7 @@ export interface HomeListing {
   currency: string;
   rentBasis: "person" | "home";
   leaseType: string;
+  city: string;
   neighborhood: string;
   latitude: number;
   longitude: number;

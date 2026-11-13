@@ -22,20 +22,26 @@ function housing(h: any): HousingExtraction | null {
   const out: HousingExtraction = {
     title: str(h.title),
     rent: num(h.rent),
+    rent_basis: h.rent_basis === "person" || h.rent_basis === "home" ? h.rent_basis : null,
+    city: str(h.city),
     location: canonLocation(h.location),
+    latitude: typeof h.latitude === "number" && Math.abs(h.latitude) <= 90 ? h.latitude : null,
+    longitude: typeof h.longitude === "number" && Math.abs(h.longitude) <= 180 ? h.longitude : null,
     address: str(h.address),
     listing_type: (LISTING_TYPES as readonly string[]).includes(h.listing_type) ? h.listing_type : null,
     availability: str(h.availability),
     move_in_date: date(h.move_in_date),
+    available_to: date(h.available_to),
     lease_duration: str(h.lease_duration),
     bedrooms: num(h.bedrooms),
     bathrooms: num(h.bathrooms),
     amenities: Array.isArray(h.amenities) ? h.amenities.map(str).filter((x): x is string => !!x) : [],
     utilities: str(h.utilities),
     contact: str(h.contact),
+    living_preferences: Array.isArray(h.living_preferences) ? h.living_preferences.map(str).filter((x): x is string => !!x) : [],
     missing_fields: [],
   };
-  for (const k of ["rent", "location", "move_in_date", "lease_duration", "bedrooms", "bathrooms", "listing_type"] as const) {
+  for (const k of ["rent", "city", "location", "move_in_date", "lease_duration", "bedrooms", "bathrooms", "listing_type"] as const) {
     if (out[k] === null) out.missing_fields.push(k);
   }
   return out;

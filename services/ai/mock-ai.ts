@@ -36,15 +36,17 @@ function extractHousing(t: string): HousingExtraction {
   const dur = s.match(/(\d+)\s?(?:-|to)?\s?(?:\d+)?\s?(months?|mo\b|weeks?)/);
   const mi = s.match(/(?:june|jun)\s(\d{1,2})/);
   return {
-    title: null, rent: money(t), location: loc === "slu" ? "South Lake Union" : loc ? loc.replace(/\b\w/g, (c) => c.toUpperCase()) : null,
+    title: null, city: /vancouver|burnaby|\bubc\b/.test(s) ? "Vancouver" : /seattle|\bslu\b|capitol hill/.test(s) ? "Seattle" : null, latitude: null, longitude: null, rent: money(t), rent_basis: /(each|per person|\/person)/.test(s) ? "person" : null, location: loc === "slu" ? "South Lake Union" : loc ? loc.replace(/\b\w/g, (c) => c.toUpperCase()) : null,
     address: null,
     listing_type: s.includes("studio") ? "studio" : /sublet|sublease/.test(s) ? "sublet" : /private room|own room|room (for rent|available)/.test(s) ? "private_room" : beds ? "apartment" : null,
+    available_to: null,
     availability: /(available now|asap|immediately)/.test(s) ? "available now" : null,
     move_in_date: mi ? `${new Date().getFullYear() + (new Date() > new Date(`${new Date().getFullYear()}-06-${mi[1]}`) ? 1 : 0)}-06-${mi[1].padStart(2, "0")}` : null,
     lease_duration: dur ? `${dur[1]} ${/w/.test(dur[2]) ? "weeks" : "months"}` : null,
     bedrooms: beds ? Number(beds[1]) : s.includes("studio") ? 0 : null, bathrooms: baths ? Number(baths[1]) : null,
     amenities: Object.entries(amenityMap).filter(([, re]) => re.test(s)).map(([k]) => k),
     utilities: /utilities included|utils? incl|all utilities/.test(s) ? "included" : /\+ ?util|utilities extra/.test(s) ? "not included" : null,
+    living_preferences: [/quiet/.test(s) && "quiet", /(no smok|non-?smok)/.test(s) && "non-smoker", /(clean|neat)/.test(s) && "clean"].filter((x): x is string => !!x),
     contact: t.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0] ?? (/\bdm\b/i.test(t) ? "DM" : null),
     missing_fields: [],
   };

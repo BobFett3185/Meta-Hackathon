@@ -2,6 +2,9 @@ import { analyzePost, findDuplicate, type HousingExtraction, type ItemExtraction
 
 export interface IngestPost extends RawPostInput {
   authorId?: string;
+  communityId?: string;
+  authorName?: string;
+  authorAvatar?: string;
   originalPostUrl?: string;
 }
 

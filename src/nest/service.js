@@ -1,20 +1,58 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  homes,
-  roommates,
-  events,
-  people,
-  demoGoal,
-  sources,
-  defaultPrompt,
-} from "./fixtures";
-import { interpretPrompt, matchHomes, toggleSaved } from "./matching";
-const KEY = "nest.demo.v1";
+import { events, people } from "./fixtures"; // Community tab demo data only (no Supabase tables for events yet)
+import { toggleSaved } from "./matching";
+import { getMe } from "../api";
+const KEY = "nest.v2";
+// Nest API: the server holds the Muse key and reads Supabase. On a physical device set
+// EXPO_PUBLIC_NEST_API_URL to your computer's LAN IP (e.g. http://192.168.1.20:8787).
+const API = process.env.EXPO_PUBLIC_NEST_API_URL || "http://localhost:8787";
+async function api(path, body) {
+  const userId = (await getMe()).id; // lets the backend tie queries to the user
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...body, userId }),
+    });
+  } catch {
+    throw new Error(
+      `Can't reach the Nest server at ${API}. Start it with "npm run server".`,
+    );
+  }
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail.error || `Nest server error (${res.status})`);
+  }
+  return res.json();
+}
+// Setup (groups, cities, default search) comes from Supabase via the server.
+let setup = null;
+// Last live results, so saved items and details can resolve ids.
+let live = { homes: [], roommates: [] };
+// Dedupes the parallel homes + roommates calls only; refresh and retry always re-query.
+let lastSearch = { key: "", at: 0, promise: null };
+function search(goal) {
+  const key = JSON.stringify(goal);
+  if (lastSearch.key !== key || Date.now() - lastSearch.at > 2000) {
+    const promise = api("/api/search", { goal, query: goal.rawPrompt }).then(
+      (r) => {
+        live = { homes: r.homes.map((m) => m.listing), roommates: r.roommates };
+        return r;
+      },
+    );
+    lastSearch = { key, at: Date.now(), promise };
+    promise.catch(() => {
+      if (lastSearch.promise === promise) lastSearch = { key: "", at: 0, promise: null };
+    });
+  }
+  return lastSearch.promise;
+}
 const initial = {
   goal: null,
   draft: null,
   saved: { homes: [], people: [], events: [] },
-  selectedId: "home-1",
+  selectedId: null,
   mapMinimized: false,
   interests: [],
   homeArea: null,
@@ -50,14 +88,22 @@ async function patch(values) {
 }
 export const nestService = {
   getState: load,
-  getSetup: () => ({
-    demoGoal: { ...demoGoal },
-    sources,
-    defaultPrompt,
-    areas: ["South Lake Union", "Capitol Hill"],
-    interests: ["Markets", "Tennis", "Weekend coffee", "Hiking", "Board games"],
-  }),
-  interpretGoal: async (raw, base = demoGoal) => interpretPrompt(raw, base),
+  loadSetup: async () => (setup = await api("/api/setup", {})),
+  getSetup: () => {
+    if (!setup) throw new Error("Nest setup has not loaded yet");
+    return {
+      defaultGoal: setup.defaultGoal,
+      sources: setup.sources,
+      cities: setup.cities,
+      areas: setup.neighborhoodsByCity[setup.defaultGoal.city] || [],
+      interests: ["Markets", "Tennis", "Weekend coffee", "Hiking", "Board games"],
+    };
+  },
+  // Muse interprets the query on the server. Works for any city.
+  interpretGoal: async (raw, base = setup?.defaultGoal) => {
+    const { goal, missing } = await api("/api/interpret", { text: raw, base });
+    return { goal, missing };
+  },
   saveGoal: async (goal) => {
     const confirmed = { ...goal, updatedAt: new Date().toISOString() };
     await patch({ goal: confirmed, draft: confirmed });
@@ -65,47 +111,10 @@ export const nestService = {
   },
   getGoal: async () => (await load()).goal,
   saveDraft: (draft) => patch({ draft }),
-  getHomeMatches: async (goal) => matchHomes(homes, goal),
-  getRoommateMatches: async (goal) =>
-    roommates
-      .filter(
-        (p) =>
-          p.seekingRoommates &&
-          goal.sourceIds.includes("interns") &&
-          goal.budgetBasis === "person" &&
-          p.budgetPerPerson <= goal.budgetAmount &&
-          p.dates[0] <= goal.startDate &&
-          p.dates[1] >= goal.endDate &&
-          p.preferredAreas.some((a) => goal.preferredNeighborhoods.includes(a)),
-      )
-      .map((p) => ({
-        ...p,
-        criteria: [
-          {
-            criterionId: "dates",
-            label: "Your dates overlap",
-            explanation: "The stated dates cover your stay",
-            status: "matched",
-            evidence: `${p.dates[0]} to ${p.dates[1]}`,
-          },
-          {
-            criterionId: "budget",
-            label: "Similar housing budget",
-            explanation: "Their per-person budget is within yours",
-            status: "matched",
-            evidence: `$${p.budgetPerPerson} per person`,
-          },
-          {
-            criterionId: "quiet",
-            label: "Also prefers a quiet home",
-            explanation: "Only matched when you also prefer a quiet home",
-            status: goal.preferences.includes("Quiet home")
-              ? "matched"
-              : "unknown",
-            evidence: "Their original post explicitly requests a quiet home",
-          },
-        ],
-      })),
+  // Live results: everything Muse extracted from the user's groups, read from Supabase by the server.
+  // Everything Muse extracted from the groups, read from Supabase by the server.
+  getHomeMatches: async (goal) => (await search(goal)).homes,
+  getRoommateMatches: async (goal) => (await search(goal)).roommates,
   getCommunity: async (area, interests = []) => ({
     events: events
       .filter((e) => e.neighborhood === area)
@@ -136,10 +145,10 @@ export const nestService = {
   getSavedItems: async () => {
     const { saved } = await load();
     return [
-      ...homes
+      ...live.homes
         .filter((x) => saved.homes.includes(x.id))
         .map((x) => ({ ...x, kind: "home", label: x.title })),
-      ...[...roommates, ...people]
+      ...[...live.roommates, ...people]
         .filter((x) => saved.people.includes(x.id))
         .map((x) => ({ ...x, kind: "person", label: x.name })),
       ...events

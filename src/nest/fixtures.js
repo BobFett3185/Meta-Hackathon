@@ -27,6 +27,7 @@ export const homes = [1350, 1200, 1450, 1300, 1425].map((rent, i) => ({
   currency: "USD",
   rentBasis: "person",
   leaseType: "Furnished room",
+  city: "Seattle",
   neighborhood: "South Lake Union",
   latitude: 47.623 + i * 0.002,
   longitude: -122.339 + i * 0.002,
@@ -117,6 +118,7 @@ export const sources = [
   { id: "marketplace", name: "Marketplace" },
   { id: "interns", name: "Seattle Intern Housing" },
   { id: "ubc", name: "UBC Students Housing Network" },
+  { id: "seattle-housing", name: "Seattle Housing, Sublets & Roommates" },
 ];
 export const defaultPrompt =
   "I’m moving to Seattle June–August 2027. Find a furnished room under $1,500 per person and someone to share with.";
@@ -137,7 +139,7 @@ export const demoGoal = {
   alreadyHasHome: false,
   mustHaves: ["Location", "Dates", "Budget", "Furnished"],
   preferences: ["Quiet home", "Near Amazon"],
-  sourceIds: ["marketplace", "interns", "ubc"],
+  sourceIds: ["marketplace", "interns", "ubc", "seattle-housing"],
   maxResults: 5,
   cadence: "Daily",
   notificationsEnabled: false,
