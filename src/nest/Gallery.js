@@ -338,7 +338,9 @@ export default function CircularGallery({
                     >
                       {match.isDemoSample
                         ? "Sample listing"
-                        : "Budget + dates match"}
+                        : match.partialDates
+                          ? "Budget match · part of your dates"
+                          : "Budget + dates match"}
                     </Label>
                   </Animated.View>
                 </View>

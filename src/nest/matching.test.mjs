@@ -15,7 +15,7 @@ test("demo shows labeled samples for incompatible filters without changing the g
     { preferredNeighborhoods: ["Capitol Hill"] },
     { budgetAmount: 100 },
     { sourceIds: [] },
-    { endDate: "2027-09-30" },
+    { startDate: "2027-09-01", endDate: "2027-09-30" },
   ]) {
     const goal = { ...demoGoal, ...patch };
     const before = JSON.stringify(goal);
@@ -69,8 +69,9 @@ test("unknown preferences are never counted as matched", () => {
 test("no results preserves budget, dates, and source constraints", () => {
   assert.deepEqual(matchHomes(homes, { ...demoGoal, budgetAmount: 100 }), []);
   assert.deepEqual(matchHomes(homes, { ...demoGoal, sourceIds: [] }), []);
+  // A stay no home overlaps at all still returns nothing.
   assert.deepEqual(
-    matchHomes(homes, { ...demoGoal, endDate: "2027-09-30" }),
+    matchHomes(homes, { ...demoGoal, startDate: "2027-09-01", endDate: "2027-09-30" }),
     [],
   );
   assert.equal(demoGoal.budgetAmount, 1500);
@@ -111,9 +112,31 @@ test("open-ended and undated posts are not dropped, and undated ones rank last",
   const matches = matchHomes([undated, openEnded], demoGoal);
   assert.deepEqual(matches.map((m) => m.listingId), ["open", "undated"]);
   assert.equal(matches[1].criteria.find((c) => c.criterionId === "dates").status, "unknown");
-  assert.equal(matchHomes([{ ...openEnded, availableFrom: "2027-07-01" }], demoGoal).length, 0);
+  // Starts a month into the stay: shown, but only as a partial-dates match.
+  assert.equal(matchHomes([{ ...openEnded, availableFrom: "2027-07-01" }], demoGoal)[0].partialDates, true);
 });
 test("neighborhood names match regardless of punctuation and case", () => {
   const goal = { ...demoGoal, preferredNeighborhoods: ["south lake-union"] };
   assert.equal(matchHomes(homes, goal).length, 5);
+});
+test("homes covering only part of the stay are shown after full matches and never called a dates match", () => {
+  const longStay = { ...demoGoal, endDate: "2027-09-30" };
+  const partial = matchHomes(homes, longStay);
+  assert.equal(partial.length, 5);
+  assert.ok(partial.every((m) => m.partialDates && !m.summaryReasons.includes("Available for part of your dates")));
+  assert.equal(partial[0].criteria.find((c) => c.criterionId === "dates").status, "not-matched");
+  const open = { ...homes[0], id: "open", availableTo: "" };
+  const short = { ...homes[0], id: "short", availableTo: "2027-06-30" };
+  const mixed = matchHomes([short, homes[1], open], longStay);
+  assert.deepEqual(mixed.map((m) => [m.listingId, !!m.partialDates]), [["open", false], [homes[1].id, true], ["short", true]]);
+  assert.ok(matchHomes(homes, demoGoal).every((m) => !m.partialDates));
+});
+test("a whole-home budget covers a room when the per-person price times the household fits", () => {
+  const room = { ...homes[0], id: "room", monthlyRent: 1000, rentBasis: "person" };
+  const solo = { ...demoGoal, intent: "Home", budgetBasis: "home", budgetAmount: 2000, roommateCount: null, housingType: "either" };
+  assert.equal(matchHomes([room], solo).length, 1);
+  assert.equal(matchHomes([{ ...room, monthlyRent: 2100 }], solo).length, 0);
+  const pair = { ...solo, intent: "Both", roommateCount: 1 };
+  assert.equal(matchHomes([room], pair).length, 1);
+  assert.equal(matchHomes([room], { ...pair, roommateCount: 2 }).length, 0);
 });

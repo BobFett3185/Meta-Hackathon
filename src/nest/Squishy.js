@@ -9,11 +9,9 @@ export const squishyColors = [
   { id: "rose", name: "Rose", swatch: "#CFABCB", tint: "#ECA7BD" },
   { id: "seafoam", name: "Seafoam", swatch: "#96BCC3", tint: "#7BD5B3" },
 ];
-// Native keeps the user's approved asset; web uses the clean alpha cutout.
-const source =
-  Platform.OS === "web"
-    ? require("./assets/squishy-web-cutout.png")
-    : require("./assets/squishy-smile.png");
+// The transparent cutout on every platform: squishy-smile.png has an opaque black canvas behind the blob,
+// which showed as a black box on phones.
+const source = require("./assets/squishy-web-cutout.png");
 
 export default function Squishy({
   size = 48,

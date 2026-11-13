@@ -36,6 +36,8 @@ The product brief specifies Next.js, TypeScript, Tailwind CSS, shadcn/ui, Lucide
 2. Start the app and scan the QR code with your phone's camera (requires the Expo Go app):
 
    ```sh
+   npm run server
+
    npx expo start --tunnel --clear
 
    npm run dev -- --tunnel --clear
