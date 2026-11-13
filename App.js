@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, ScrollView, Image, Pressable, StatusBar, Dimensions, ActivityIndicator, Modal, Animated, PanResponder } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as api from './src/api';
+import Nest from './src/nest/Nest';
 
 const BLUE = '#0866ff';
 const W = Dimensions.get('window').width;
@@ -49,7 +50,7 @@ const IconButton = ({ name, family='ion', onPress, badge }) => (
 );
 
 const Header = ({title, logo, right, back, onBack, onMenu}) => <View style={s.header}>
-  <View style={s.headerLeft}>{back && <Pressable onPress={onBack}><Ionicons name="chevron-back" size={27}/></Pressable>}{!back&&<Pressable onPress={onMenu} hitSlop={10}><Ionicons name="menu" size={27}/></Pressable>}<Text style={[s.headerTitle,logo&&s.logo]}>{title}</Text></View>
+  <View style={s.headerLeft}>{back && <Pressable onPress={onBack}><Ionicons name="chevron-back" size={27}/></Pressable>}{!back&&<Pressable accessibilityRole="button" accessibilityLabel="Open Facebook menu" onPress={onMenu} hitSlop={10}><Ionicons name="menu" size={27}/></Pressable>}<Text style={[s.headerTitle,logo&&s.logo]}>{title}</Text></View>
   <View style={s.headerRight}>{right}</View>
 </View>;
 
@@ -183,6 +184,7 @@ function Reels(){
   </View>}
 
 const menuItems = [
+  ['Nest','home-outline'],
   ['Saved','bookmark-outline'],['Dating','heart-outline'],['Games','game-controller-outline'],['Meta AI','sparkles-outline'],
   ['Memories','time-outline'],['Avatars','happy-outline'],['Birthdays','gift-outline'],['Chat with AIs','chatbubbles-outline'],
   ['Community Notes','document-text-outline'],['Events','calendar-outline'],['Explore','compass-outline'],['Feeds','logo-rss'],
@@ -195,7 +197,7 @@ const settingsItems = [
   ['App language','globe-outline'],['App icon','logo-facebook'],['Cellular data use','phone-portrait-outline']
 ];
 
-function MenuRow({label,icon,onPress}){return <Pressable onPress={onPress} style={({pressed})=>[s.menuRow,pressed&&s.menuRowPressed]}><Ionicons name={icon} size={30}/><Text style={s.menuLabel}>{label}</Text></Pressable>}
+function MenuRow({label,icon,onPress}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed})=>[s.menuRow,pressed&&s.menuRowPressed]}><Ionicons name={icon} size={30} color={label==='Nest'?BLUE:undefined}/><View><Text style={s.menuLabel}>{label}</Text>{label==='Nest'&&<Text style={{fontSize:13,color:'#656B73',marginTop:3}}>Find your people. Find your place.</Text>}</View></Pressable>}
 
 function MenuDrawer({visible,onClose,onSelect}){
   const me=useData(api.getMe);
@@ -244,13 +246,13 @@ export default function App(){
     onPanResponderRelease:(_,g)=>{if(g.dx>45||g.vx>.55)setMenuOpen(true);}
   })).current;
   const selectMenu=(label)=>{const routes={Marketplace:'market',Groups:'groups',Reels:'reels',Profile:'profile',Friends:'groups',Feeds:'home'}; setMenuOpen(false); setInbox(false); if(routes[label]){setFeature(null);setTab(routes[label]);}else{setFeature(label);}};
-  let content=feature?<FeaturePage title={feature} onBack={()=>setFeature(null)}/>:inbox?<Inbox onBack={()=>setInbox(false)}/>:tab==='home'?<Home openMenu={()=>setMenuOpen(true)}/>:tab==='market'?<Marketplace openInbox={()=>setInbox(true)}/>:tab==='groups'?<Groups/>:tab==='notify'?<Notifications/>:tab==='profile'?<Profile/>:<Reels/>;
+  let content=feature==='Nest'?<Nest onExit={()=>setFeature(null)}/>:feature?<FeaturePage title={feature} onBack={()=>setFeature(null)}/>:inbox?<Inbox onBack={()=>setInbox(false)}/>:tab==='home'?<Home openMenu={()=>setMenuOpen(true)}/>:tab==='market'?<Marketplace openInbox={()=>setInbox(true)}/>:tab==='groups'?<Groups/>:tab==='notify'?<Notifications/>:tab==='profile'?<Profile/>:<Reels/>;
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle={tab==='reels'&&!feature?'light-content':'dark-content'}/>
       <View style={s.app}>
         {content}
-        {tab==='home'&&!inbox&&!feature&&!menuOpen&&<View style={s.edgeSwipe} {...edgeSwipe.panHandlers}/>}
+        {tab==='home'&&!inbox&&!feature&&!menuOpen&&<View style={[s.edgeSwipe,{top:58}]} {...edgeSwipe.panHandlers}/>}
         {!inbox&&!feature&&<Nav tab={tab} setTab={x=>{setTab(x);setInbox(false);setFeature(null)}}/>}
         <MenuDrawer visible={menuOpen} onClose={()=>setMenuOpen(false)} onSelect={selectMenu}/>
       </View>
