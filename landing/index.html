@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nest · Find your people. Find your place.</title>
+<meta name="description" content="Nest reads the Facebook Group posts for you: one sentence in, a home, a roommate, and a community out.">
+<link rel="icon" href="squishy.png">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #FAF9F6;
+    --surface: #FFFFFF;
+    --ink: #16181C;
+    --ink-2: #565C65;
+    --ink-3: #7A808A;
+    --line: #E6E8EB;
+    --blue: #0866FF;
+    --blue-soft: #EAF2FF;
+    --peri: #AAA8ED;
+    --peri-soft: #EFEDF9;
+    --track: #ECEEF1;
+    --unknown: #8A5700;
+    --unknown-soft: #FFF4DC;
+    --shadow: 0 1px 2px rgba(22,24,28,.04), 0 8px 28px rgba(22,24,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #121315;
+      --surface: #1B1D20;
+      --ink: #F2F1EE;
+      --ink-2: #B9BDC4;
+      --ink-3: #8D929B;
+      --line: #2B2E33;
+      --blue: #4C8DFF;
+      --blue-soft: #16243F;
+      --peri: #AAA8ED;
+      --peri-soft: #25243A;
+      --track: #2A2D32;
+      --unknown: #E9B455;
+      --unknown-soft: #33290F;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 88px 0; }
+  h1, h2, h3 { margin: 0; letter-spacing: -0.02em; line-height: 1.08; }
+  h1 { font-size: clamp(44px, 7.4vw, 84px); font-weight: 800; }
+  h2 { font-size: clamp(30px, 4.2vw, 46px); font-weight: 800; max-width: 18ch; }
+  h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+  p { margin: 0; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; }
+  .lede { font-size: clamp(18px, 2vw, 21px); color: var(--ink-2); max-width: 56ch; margin-top: 18px; }
+  .muted { color: var(--ink-2); }
+  .small { font-size: 14px; color: var(--ink-3); }
+  a { color: var(--blue); text-underline-offset: 3px; }
+  .card { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 28px; }
+  .grid { display: grid; gap: 20px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 860px) { .g3, .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } section { padding: 64px 0; } }
+  @media (max-width: 620px) { .g2, .g3, .g4 { grid-template-columns: minmax(0, 1fr); } }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 22px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 21px; letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
+  .brand img { width: 44px; height: auto; margin: 0 -4px 0 -8px; }
+  nav .links { margin-left: auto; display: flex; gap: 22px; }
+  nav .links a { color: var(--ink-2); text-decoration: none; font-size: 15px; font-weight: 600; }
+  nav .links a:hover { color: var(--ink); }
+  @media (max-width: 620px) { nav .links { display: none; } }
+
+  /* hero */
+  .hero { padding: 72px 0 80px; }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 32px; align-items: center; }
+  .hero img.blob { position: absolute; left: -6%; bottom: -4%; width: 44%; z-index: 4; animation: bob 5s ease-in-out infinite; filter: drop-shadow(0 12px 18px rgba(22,24,28,.18)); }
+  @keyframes bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+  @media (prefers-reduced-motion: reduce) { .hero img.blob { animation: none; } html { scroll-behavior: auto; } }
+  @media (max-width: 860px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); } .fan { max-width: 320px; } }
+
+  /* app screenshots */
+  .shot { display: block; padding: 0; border: 5px solid #0c0d10; border-radius: 24px; background: #0c0d10; overflow: hidden; cursor: zoom-in; box-shadow: 0 2px 4px rgba(22,24,28,.10), 0 18px 44px rgba(22,24,28,.20); transition: transform .35s cubic-bezier(.2,.7,.2,1); }
+  .shot img { display: block; width: 100%; height: auto; border-radius: 18px; }
+  .shot:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+  .fan { position: relative; width: 100%; max-width: 430px; aspect-ratio: 1 / 1.22; justify-self: center; }
+  .fan .shot { position: absolute; width: 46%; }
+  .fan .shot:nth-child(1) { left: 0; top: 13%; transform: rotate(-8deg); z-index: 1; }
+  .fan .shot:nth-child(2) { right: 0; top: 13%; transform: rotate(8deg); z-index: 1; }
+  .fan .shot:nth-child(3) { left: 27%; top: 0; z-index: 2; }
+  .fan .shot:hover { transform: rotate(0) translateY(-6px); z-index: 3; }
+
+  /* demo player */
+  .demo { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 48px; align-items: center; margin-top: 44px; }
+  @media (max-width: 860px) { .demo { grid-template-columns: minmax(0, 1fr); } .demo .phone { max-width: 300px; margin: 0 auto; } }
+  .phone { position: relative; display: block; width: 100%; padding: 0; border: 8px solid #0c0d10; border-radius: 40px; background: #0c0d10; overflow: hidden; cursor: pointer; box-shadow: 0 2px 4px rgba(22,24,28,.10), 0 24px 60px rgba(22,24,28,.24); }
+  .phone video { display: block; width: 100%; height: auto; aspect-ratio: 1206 / 2622; border-radius: 32px; background: #fff; }
+  .phone .play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(12,13,16,.28); transition: opacity .2s; }
+  .phone .play i { width: 76px; height: 76px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .phone .play i::before { content: ""; border-style: solid; border-width: 14px 0 14px 23px; border-color: transparent transparent transparent #0866FF; margin-left: 6px; }
+  .phone.playing .play { opacity: 0; }
+  .phone:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .chapters { display: grid; gap: 14px; }
+  .chapter { position: relative; overflow: hidden; display: grid; grid-template-columns: 36px 1fr auto; gap: 4px 16px; align-items: start; text-align: left; font: inherit; color: inherit; border: 0; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 22px 24px; cursor: pointer; transition: transform .2s, outline-color .2s; outline: 2px solid transparent; outline-offset: -2px; }
+  .chapter:hover { transform: translateX(4px); }
+  .chapter:focus-visible, .chapter.on { outline-color: var(--blue); }
+  .chapter .n { width: 36px; height: 36px; border-radius: 12px; background: var(--peri-soft); display: grid; place-items: center; font-weight: 800; }
+  .chapter.on .n { background: var(--blue); color: #fff; }
+  .chapter p { margin-top: 6px; color: var(--ink-2); font-size: 16px; }
+  .chapter .go { font-size: 13px; font-weight: 700; color: var(--blue); white-space: nowrap; padding-top: 4px; }
+  .chapter .prog { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--blue); }
+  .demo-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+  .linkbtn { font: inherit; font-size: 15px; font-weight: 700; color: var(--blue); background: none; border: 0; padding: 6px 0; cursor: pointer; }
+  .linkbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* scattered tour */
+  .tour { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; margin-top: 56px; padding: 10px 6px 0; }
+  .tour figure { margin: 0; }
+  .tour figure:nth-child(odd) .shot { transform: rotate(-3deg) translateY(10px); }
+  .tour figure:nth-child(even) .shot { transform: rotate(3deg) translateY(-10px); }
+  .tour figure:nth-child(3n) .shot { transform: rotate(-1.5deg) translateY(22px); }
+  .tour .shot { width: 100%; border-width: 4px; border-radius: 20px; }
+  .tour .shot img { border-radius: 15px; }
+  .tour .shot:hover { transform: rotate(0) translateY(-6px) scale(1.04); }
+  .tour figcaption { margin-top: 30px; font-size: 14px; font-weight: 600; color: var(--ink-2); text-align: center; line-height: 1.35; }
+  @media (max-width: 860px) { .tour { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 34px; } }
+  @media (max-width: 480px) { .tour { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { .shot, .chapter { transition: none; } }
+
+  .lightbox { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(12,13,16,.78); backdrop-filter: blur(6px); cursor: zoom-out; padding: 24px; }
+  .lightbox.open { display: grid; }
+  .lightbox img { max-height: 92vh; max-width: 92vw; border-radius: 28px; border: 8px solid #0c0d10; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .ask { margin-top: 34px; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 20px 22px; max-width: 620px; }
+  .ask .label { font-size: 13px; font-weight: 700; color: var(--ink-3); margin-bottom: 8px; }
+  .ask .text { font-size: 18px; line-height: 1.45; }
+  .ask .text::after { content: ""; display: inline-block; width: 2px; height: 1.05em; background: var(--blue); margin-left: 3px; vertical-align: -3px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0 } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip { background: var(--blue-soft); color: var(--blue); font-weight: 700; font-size: 14px; border-radius: 999px; padding: 6px 12px; }
+  .chip.peri { background: var(--peri-soft); color: var(--ink); }
+
+  /* stat tiles */
+  .stat .num { font-size: clamp(64px, 9vw, 104px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .stat .num span { font-size: .5em; letter-spacing: -0.02em; margin-left: 2px; }
+  .stat p { margin-top: 12px; font-size: 18px; max-width: 30ch; }
+  .meter { height: 12px; border-radius: 6px; background: var(--track); margin-top: 22px; overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 6px; background: var(--blue); width: 0; transition: width 1.1s cubic-bezier(.2,.7,.2,1); }
+  .meter-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+  .post { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; background: var(--bg); border-radius: 14px; padding: 14px 16px; color: var(--ink); }
+
+  /* category */
+  .compare { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 20px; margin-top: 44px; align-items: stretch; }
+  @media (max-width: 860px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+  .tree { display: grid; gap: 14px; margin-top: 18px; }
+  .branch { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; }
+  @media (max-width: 620px) { .branch { grid-template-columns: minmax(0, 1fr); } }
+  .root { font-weight: 800; font-size: 15px; background: var(--bg); border-radius: 12px; padding: 12px 14px; text-align: center; }
+  .root.key { background: var(--blue); color: #fff; }
+  .leaves { display: flex; flex-wrap: wrap; gap: 6px; }
+  .leaves span { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--track); color: var(--ink-3); }
+  .leaves span.hit { background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+  .leaves.big { flex-direction: column; align-items: stretch; }
+  .leaves.big span { font-size: 15px; padding: 9px 14px; border-radius: 12px; }
+  .nestcard { outline: 2px solid var(--blue); outline-offset: -2px; }
+
+
+  /* muse transform */
+  .transform { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.15fr); gap: 20px; align-items: center; margin-top: 44px; }
+  .arrow { font-weight: 800; color: var(--blue); font-size: 14px; text-align: center; line-height: 1.3; }
+  .arrow b { display: block; font-size: 30px; line-height: 1; }
+  @media (max-width: 860px) { .transform { grid-template-columns: minmax(0, 1fr); } .arrow b { transform: rotate(90deg); } }
+  .fields { display: grid; grid-template-columns: auto 1fr; gap: 9px 18px; font-size: 15px; margin: 14px 0 0; }
+  .fields dt { color: var(--ink-3); }
+  .fields dd { margin: 0; font-weight: 600; }
+  .unknown { display: inline-block; background: var(--unknown-soft); color: var(--unknown); font-weight: 700; font-size: 13px; border-radius: 8px; padding: 1px 8px; }
+  .verb h3 { color: var(--blue); }
+  .verb p { margin-top: 8px; color: var(--ink-2); font-size: 16px; }
+
+  /* flow */
+  .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 44px; }
+  @media (max-width: 860px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .flow .step { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 24px; position: relative; }
+  .flow .big { font-size: clamp(44px, 5.4vw, 64px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .flow .step p { margin-top: 8px; color: var(--ink-2); font-size: 15px; }
+  .flow .step.key { background: var(--blue); color: #fff; }
+  .flow .step.key p { color: rgba(255,255,255,.88); }
+
+  /* bar chart */
+  .chart { margin-top: 20px; }
+  .chart h3 { max-width: 34ch; }
+  .bars { margin-top: 22px; display: grid; gap: 2px; position: relative; }
+  .bar-row { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; padding: 5px 0; border-radius: 8px; cursor: default; outline: none; }
+  .bar-row:hover, .bar-row:focus-visible { background: color-mix(in srgb, var(--blue) 7%, transparent); }
+  .bar-row .name { font-size: 14px; color: var(--ink-2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row .track { display: flex; align-items: center; gap: 8px; }
+  .bar-row .bar { height: 18px; border-radius: 0 4px 4px 0; background: var(--blue); width: 0; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+  .bar-row .val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  @media (max-width: 620px) { .bar-row { grid-template-columns: 104px 1fr; } }
+  .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; line-height: 1.4; padding: 8px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 240px; }
+  .tip b { display: block; font-size: 14px; }
+  details { margin-top: 18px; }
+  summary { cursor: pointer; font-size: 14px; color: var(--ink-3); font-weight: 600; }
+  table { border-collapse: collapse; margin-top: 12px; font-size: 14px; width: 100%; max-width: 520px; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); }
+  td:not(:first-child), th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* muse layer */
+  .layer { display: grid; grid-template-columns: minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr); gap: 6px; align-items: stretch; margin-top: 44px; }
+  .layer .node { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 16px; }
+  .layer .node h3 { font-size: 17px; }
+  .layer .node p { font-size: 14px; color: var(--ink-2); margin-top: 6px; line-height: 1.45; }
+  .layer .node .tag { margin-bottom: 10px; font-size: 11px; }
+  .layer .node.muse { outline: 2px solid var(--blue); outline-offset: -2px; }
+  .layer .node.store { background: var(--peri-soft); box-shadow: none; }
+  .layer .link { display: grid; place-items: center; color: var(--blue); font-weight: 800; font-size: 20px; }
+  @media (max-width: 980px) {
+    .layer { grid-template-columns: minmax(0, 1fr); }
+    .layer .link { transform: rotate(90deg); height: 22px; }
+  }
+  .result-bar { margin-top: 10px; background: var(--ink); color: var(--bg); border-radius: 16px; padding: 14px 18px; font-size: 15px; line-height: 1.45; }
+  .sub { margin-top: 64px; font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -0.015em; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  .sw.gray, .pbar.gray { background: var(--ink-3); }
+  .sw.blue, .pbar.blue { background: var(--blue); }
+  .pairs { margin-top: 22px; display: grid; gap: 22px; }
+  .pair .ptitle { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+  .pline { display: grid; grid-template-columns: 1fr 86px; gap: 12px; align-items: center; padding: 3px 0; border-radius: 6px; outline: none; }
+  .pline:hover, .pline:focus-visible { background: color-mix(in srgb, var(--blue) 7%, transparent); }
+  .ptrack { background: var(--track); border-radius: 0 4px 4px 0; height: 16px; }
+  .pbar { height: 16px; border-radius: 0 4px 4px 0; width: 0; min-width: 2px; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+  .pval { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .versus { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+  @media (max-width: 860px) { .versus { grid-template-columns: minmax(0, 1fr); } }
+  .checks { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 9px; font-size: 15px; color: var(--ink-2); }
+  .checks li { padding-left: 28px; position: relative; }
+  .checks li::before { position: absolute; left: 0; top: 0; font-weight: 800; width: 20px; text-align: center; }
+  .checks li.no::before { content: "\2715"; color: var(--unknown); }
+  .checks li.yes::before { content: "\2713"; color: var(--blue); }
+  .checks b { color: var(--ink); }
+  .jobs .card { padding: 22px; }
+  .jobs .k, .steps .k { font-size: 13px; font-weight: 800; letter-spacing: .06em; color: var(--blue); margin-bottom: 10px; }
+  .jobs h3 { font-size: 18px; }
+  .jobs p { font-size: 15px; color: var(--ink-2); margin-top: 8px; line-height: 1.5; }
+  .jobs .guard { background: var(--ink); color: var(--bg); box-shadow: none; }
+  .jobs .guard p { color: color-mix(in srgb, var(--bg) 82%, transparent); }
+  .jobs .guard .k { color: var(--peri); }
+  .steps { list-style: none; margin: 44px 0 0; padding: 0; display: grid; gap: 12px; }
+  .steps li { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 22px 24px; display: grid; grid-template-columns: 44px 1fr; gap: 8px; }
+  .steps .k { margin: 3px 0 0; }
+  .steps p { color: var(--ink-2); font-size: 16px; margin-top: 6px; max-width: 86ch; }
+  @media (max-width: 620px) { .steps li { grid-template-columns: minmax(0, 1fr); } }
+
+  /* build */
+  .build h3 { margin-bottom: 12px; }
+  .build ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 16px; }
+  .build li { margin-bottom: 8px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; border-radius: 8px; padding: 3px 9px; margin-bottom: 14px; background: var(--peri-soft); color: var(--ink); }
+  .tag.blue { background: var(--blue-soft); color: var(--blue); }
+  .tag.warn { background: var(--unknown-soft); color: var(--unknown); }
+  .quote { margin-top: 44px; font-size: clamp(26px, 3.6vw, 40px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; max-width: 22ch; }
+  .quote em { font-style: normal; color: var(--blue); }
+
+  .closing { text-align: center; padding: 96px 0 72px; }
+  .closing h2 { max-width: none; }
+  .closing img { width: 150px; margin-bottom: 8px; }
+  footer { border-top: 1px solid var(--line); padding: 28px 0 44px; }
+  footer p { font-size: 13px; color: var(--ink-3); max-width: 80ch; margin-bottom: 8px; }
+  .alt { background: color-mix(in srgb, var(--peri) 9%, var(--bg)); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="squishy.png" alt="">Nest</a>
+    <div class="links">
+      <a href="#problem">Problem</a>
+      <a href="#category">Why now</a>
+      <a href="#product">Product</a>
+      <a href="#muse">Muse</a>
+      <a href="#numbers">Numbers</a>
+      <a href="#build">How we built it</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Built to make Facebook valuable for young adults</p>
+      <h1>Find your people.<br>Find your place.</h1>
+      <p class="lede">Moving to a new city means reading hundreds of Facebook Group posts. Nest reads them for you. Say what you need in one sentence and get a home, a roommate, and a community.</p>
+      <div class="ask" aria-label="Example request">
+        <div class="label">You tell Nest</div>
+        <div class="text">I'm moving to Seattle for my Amazon internship, June to August 2027. Looking for a room near South Lake Union under $1,500 per person and a roommate to share with.</div>
+        <div class="chips">
+          <span class="chip">5 homes that fit</span>
+          <span class="chip">2 roommate matches</span>
+          <span class="chip peri">Every match explained</span>
+        </div>
+      </div>
+    </div>
+    <div class="fan">
+      <button class="shot" type="button" aria-label="Enlarge screenshot: roommate matches"><img src="assets/s49.jpg" alt="Nest roommate match card for a fellow intern"></button>
+      <button class="shot" type="button" aria-label="Enlarge screenshot: community events"><img src="assets/s75.jpg" alt="Nest community events during a Seattle stay"></button>
+      <button class="shot" type="button" aria-label="Enlarge screenshot: housing matches"><img src="assets/s3.jpg" alt="Nest housing matches in South Lake Union"></button>
+      <img class="blob" src="squishy.png" alt="Squishy, the Nest mascot">
+    </div>
+  </div>
+</header>
+
+<section id="problem" class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The problem</p>
+    <h2>The homes are already on Facebook. Nobody can search them.</h2>
+    <p class="lede">Young adults move for school, internships, and first jobs, and they already look for housing on social media. But the leads live in informal posts scattered across Groups.</p>
+    <div class="grid g2" style="margin-top:44px">
+      <div class="card stat">
+        <div class="num" data-count="27">0<span>%</span></div>
+        <p>of renters aged 18 to 24 use social media in their rental search.</p>
+        <div class="meter" role="img" aria-label="27 out of 100"><i data-w="27"></i></div>
+        <div class="meter-scale"><span>0</span><span>100%</span></div>
+      </div>
+      <div class="card stat">
+        <div class="num" data-count="81">0<span>%</span></div>
+        <p>say price is a top factor in choosing a place.</p>
+        <div class="meter" role="img" aria-label="81 out of 100"><i data-w="81"></i></div>
+        <div class="meter-scale"><span>0</span><span>100%</span></div>
+      </div>
+    </div>
+    <p class="small" style="margin-top:14px">Source: Apartments.com survey of nearly 5,000 young renters.</p>
+    <div class="card" style="margin-top:20px">
+      <h3>What a housing lead actually looks like</h3>
+      <p class="post" style="margin-top:14px">1.8k, SLU, Jun-Aug, DM me</p>
+      <p class="muted" style="margin-top:14px;font-size:16px">Is that per person? Is it furnished? Which dates exactly? Today the only way to find out is to read every post yourself, then do it again for roommates, and again to find people to know.</p>
+    </div>
+  </div>
+</section>
+
+<section id="category">
+  <div class="wrap">
+    <p class="eyebrow">Why it is worth solving</p>
+    <h2>Housing is a subcategory today. It deserves its own.</h2>
+    <p class="lede">Right now, finding a home on Facebook is something you piece together from features built for other things. It is one of the biggest decisions a young adult makes, and it has no home of its own.</p>
+    <div class="compare">
+      <div class="card">
+        <span class="tag warn">Today</span>
+        <h3>A side effect of other features</h3>
+        <div class="tree">
+          <div class="branch">
+            <div class="root">Groups</div>
+            <div class="leaves"><span>Discussions</span><span>Events</span><span>Buy and sell</span><span>Memes</span><span class="hit">Housing posts</span><span>Introductions</span></div>
+          </div>
+          <div class="branch">
+            <div class="root">Marketplace</div>
+            <div class="leaves"><span>Vehicles</span><span>Electronics</span><span>Furniture</span><span>Clothing</span><span class="hit">Rentals</span><span>Free stuff</span></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:18px;font-size:16px">Housing is split across two products and mixed in with everything else. You do the stitching.</p>
+      </div>
+      <div class="card nestcard">
+        <span class="tag blue">With Nest</span>
+        <h3>Its own category</h3>
+        <div class="tree">
+          <div class="branch">
+            <div class="root key">Nest</div>
+            <div class="leaves big"><span class="hit">A place to live</span><span class="hit">People to live with</span><span class="hit">A community nearby</span></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:18px;font-size:16px">One destination that pulls together what Groups and Marketplace already hold, and answers the whole question: where do I live, with whom, and who do I know there?</p>
+      </div>
+    </div>
+    <p class="quote">A problem this big should not be a <em>filter</em>. It should be a <em>product</em>.</p>
+  </div>
+</section>
+
+<section id="product">
+  <div class="wrap">
+    <p class="eyebrow">The product</p>
+    <h2>One request. Three things you need in a new city.</h2>
+    <p class="lede">Nest lives inside Facebook and works from the Groups you already belong to.</p>
+    <div class="demo">
+      <button class="phone" id="phone" type="button" aria-label="Play or pause the app demo">
+        <video id="demo" src="assets/demo.mp4" poster="assets/s3.jpg" muted playsinline preload="auto"></video>
+        <span class="play" aria-hidden="true"><i></i></span>
+      </button>
+      <div class="chapters">
+        <button class="chapter" type="button" data-start="12" data-end="47.5">
+          <div class="n">1</div>
+          <div><h3>A place to live</h3>
+          <p>Group posts become standard listings with rent, dates, and neighborhood, shown on a real map and filtered to your budget and stay.</p></div>
+          <span class="go">&#9654; Play</span><i class="prog"></i>
+        </button>
+        <button class="chapter" type="button" data-start="47.5" data-end="67">
+          <div class="n">2</div>
+          <div><h3>People to live with</h3>
+          <p>See who is looking in the same place, for the same dates, on a similar budget, and what you share before you ever message them.</p></div>
+          <span class="go">&#9654; Play</span><i class="prog"></i>
+        </button>
+        <button class="chapter" type="button" data-start="67" data-end="90">
+          <div class="n">3</div>
+          <div><h3>A reason to go out</h3>
+          <p>Once you land, Nest shows what is happening near your new place and who has opted in to meeting.</p></div>
+          <span class="go">&#9654; Play</span><i class="prog"></i>
+        </button>
+        <div class="demo-foot">
+          <button class="linkbtn" id="playall" type="button">&#9654; Play the full walkthrough</button>
+          <span class="small">Recorded on a phone, running the real app.</span>
+        </div>
+      </div>
+    </div>
+    <p class="quote">The first two help you move. The third helps you <em>belong</em>.</p>
+
+    <div class="tour">
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s8.jpg" alt="Mock Facebook feed with a Seattle housing group post" loading="lazy"></button><figcaption>It starts in the Groups you already use</figcaption></figure>
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s21.jpg" alt="Nest request sheet with a one-sentence ask" loading="lazy"></button><figcaption>Say what you need in one sentence</figcaption></figure>
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s31.jpg" alt="How this home fits: criteria checked one by one" loading="lazy"></button><figcaption>Every match explained, gaps flagged</figcaption></figure>
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s37.jpg" alt="Map of homes around South Lake Union with prices" loading="lazy"></button><figcaption>Homes on a map of the neighborhood</figcaption></figure>
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s56.jpg" alt="Roommate profile with introduction and budget" loading="lazy"></button><figcaption>Meet the person before you message</figcaption></figure>
+      <figure><button class="shot" type="button" aria-label="Enlarge screenshot"><img src="assets/s71.jpg" alt="Community tab with events during the stay" loading="lazy"></button><figcaption>Plans for once you have landed</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="muse" class="alt">
+  <div class="wrap">
+    <p class="eyebrow">How Muse powers it</p>
+    <h2>Muse is the layer between the posts and the person.</h2>
+    <p class="lede">On one side: informal Group posts with no fields at all. On the other: a person with a need, written in one sentence. Neither side is structured. Muse translates both into the same schema, and only then can they be compared.</p>
+
+    <div class="layer" role="img" aria-label="Group posts and the user's sentence both pass through Muse into one shared schema, which a rule-based matcher compares to produce explained results.">
+      <div class="node">
+        <span class="tag">What we collect</span>
+        <h3>Group posts</h3>
+        <p>Free text, slang, abbreviations, photos. No rent field, no date field, no location field.</p>
+      </div>
+      <div class="link">&rarr;</div>
+      <div class="node muse">
+        <span class="tag blue">Muse · ingestion</span>
+        <h3>Classify and extract</h3>
+        <p>10 post categories. 19 typed housing fields. Photos when text has gaps.</p>
+      </div>
+      <div class="link">&rarr;</div>
+      <div class="node store">
+        <span class="tag">Shared schema</span>
+        <h3>Postgres</h3>
+        <p>Listings and roommate profiles, each linked to its original post.</p>
+      </div>
+      <div class="link">&larr;</div>
+      <div class="node muse">
+        <span class="tag blue">Muse · query</span>
+        <h3>Interpret</h3>
+        <p>One sentence becomes a 13-field search goal, grounded in our live catalog.</p>
+      </div>
+      <div class="link">&larr;</div>
+      <div class="node">
+        <span class="tag">What the user wants</span>
+        <h3>One sentence</h3>
+        <p>"Room near SLU this summer, under $1,500, and a roommate."</p>
+      </div>
+    </div>
+    <div class="result-bar"><b>Rule-based matcher</b> compares the two in plain, unit-tested code and returns results with a verdict per criterion: matched, not matched, or unknown.</div>
+
+    <h3 class="sub">Remove Muse, and what is left to filter on?</h3>
+    <p class="muted" style="max-width:62ch;margin-top:8px">A filter needs fields. We measured our 209 demo listings to see what a plain search would have to work with.</p>
+    <div class="card" style="margin-top:20px">
+      <div class="legend"><span><i class="sw gray"></i>Stated in the raw post, usable by a filter</span><span><i class="sw blue"></i>Available after Muse</span></div>
+      <div class="pairs" id="pairs"></div>
+      <details>
+        <summary>View as table</summary>
+        <table id="pairs-table"><thead><tr><th>Field</th><th>Raw post</th><th>After Muse</th></tr></thead><tbody></tbody></table>
+      </details>
+      <p class="small" style="margin-top:14px">Out of 209 listings extracted from mock Group posts; snapshot from November 12, 2026. A raw post counts as giving its city when the city name appears in the post text.</p>
+    </div>
+
+    <div class="versus">
+      <div class="card">
+        <span class="tag warn">Keyword filter</span>
+        <h3>Same post, same request</h3>
+        <p class="post" style="margin-top:14px">1br in SLU avail July 1, 2400/mo, 12mo lease. sorry no pets</p>
+        <p class="small" style="margin-top:10px">A real post from our demo data. Request: South Lake Union, June 1 to August 31, under $2,000.</p>
+        <ul class="checks">
+          <li class="no"><b>Neighborhood:</b> "South Lake Union" does not match "SLU". Post is missed.</li>
+          <li class="no"><b>Budget:</b> "2400/mo" is text, not a number. Cannot compare to $2,000.</li>
+          <li class="no"><b>Dates:</b> "July 1" has no year and no end. Cannot test against a stay.</li>
+          <li class="no"><b>Per person or whole home:</b> not written anywhere.</li>
+        </ul>
+      </div>
+      <div class="card nestcard">
+        <span class="tag blue">With Muse</span>
+        <h3>What Nest stores for that post</h3>
+        <dl class="fields">
+          <dt>Neighborhood</dt><dd>South Lake Union, Seattle</dd>
+          <dt>Rent</dt><dd>$2,400 for the whole home</dd>
+          <dt>Move-in</dt><dd>2027-07-01, no end date</dd>
+          <dt>Type</dt><dd>Apartment, 1 bedroom</dd>
+          <dt>Utilities</dt><dd><span class="unknown">Unknown · not stated</span></dd>
+        </dl>
+        <ul class="checks">
+          <li class="yes"><b>Verdict:</b> right neighborhood, over budget, starts a month into the stay.</li>
+          <li class="yes"><b>Result:</b> correctly left out, with a reason the user can read.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="sub">Seven jobs Muse does in Nest</h3>
+    <div class="grid g4 jobs" style="margin-top:20px">
+      <div class="card"><div class="k">01</div><h3>Classify every post</h3><p>Into 10 categories, from housing listing and lease takeover to roommate request, furniture, and events, so each post is routed to the right extractor.</p></div>
+      <div class="card"><div class="k">02</div><h3>Extract housing</h3><p>19 typed fields through structured outputs against a strict JSON schema: rent, rent basis, city, neighborhood, coordinates, dates, type, amenities.</p></div>
+      <div class="card"><div class="k">03</div><h3>Look at the photos</h3><p>Two-pass and multimodal. Text first at minimal reasoning effort; images only when fields are missing. The second pass fills gaps and never overrides text.</p></div>
+      <div class="card"><div class="k">04</div><h3>Build roommate profiles</h3><p>A second-stage extraction on roommate posts: cleanliness, sleep, smoking, pets, social style as fixed enums, each backed by a verbatim quote checked against the post.</p></div>
+      <div class="card"><div class="k">05</div><h3>Understand the request</h3><p>One sentence becomes a 13-field search goal: intent, city, neighborhoods, ISO dates, budget, basis, home type, preferences.</p></div>
+      <div class="card"><div class="k">06</div><h3>Resolve places</h3><p>The prompt carries a live catalog of cities and neighborhoods from our database, so "SLU" and "downtown" resolve to areas that have listings.</p></div>
+      <div class="card"><div class="k">07</div><h3>Ask when it matters</h3><p>If the city, dates, or budget are missing, Muse returns one short follow-up question. Otherwise it stays out of the way.</p></div>
+      <div class="card guard"><div class="k">Guardrails</div><h3>Never guess</h3><p>Null over invention, schema validation before every write, duplicate detection across groups, retries with backoff, a mock adapter fallback, and the key kept server-side.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="numbers">
+  <div class="wrap">
+    <p class="eyebrow">Our demo, in numbers</p>
+    <h2>From a pile of posts to five homes that fit.</h2>
+    <div class="flow">
+      <div class="step"><div class="big" data-count="12">0</div><p>mock Facebook Groups read by Muse</p></div>
+      <div class="step"><div class="big" data-count="209">0</div><p>structured housing listings extracted</p></div>
+      <div class="step"><div class="big" data-count="61">0</div><p>roommate profiles extracted</p></div>
+      <div class="step key"><div class="big" data-count="1">0</div><p>sentence to search all of it</p></div>
+    </div>
+
+    <div class="card chart">
+      <h3>South Lake Union has the most homes on offer in our Seattle demo data</h3>
+      <p class="small" style="margin-top:6px">Homes on offer by neighborhood, extracted by Muse from Group posts</p>
+      <div class="bars" id="bars"></div>
+      <details>
+        <summary>View as table</summary>
+        <table id="table"><thead><tr><th>Neighborhood</th><th>Homes on offer</th><th>Median room rent</th></tr></thead><tbody></tbody></table>
+      </details>
+      <p class="small" style="margin-top:14px">105 Seattle homes on offer. Median room rent is the per-person monthly price. Demo data from mock Groups; snapshot from November 12, 2026.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build" class="alt">
+  <div class="wrap">
+    <p class="eyebrow">How we built it</p>
+    <h2>Five features, built in parallel, joined by one pipeline.</h2>
+    <p class="lede">We built Nest for people our age with little money, little time, and even less attention. Each of us owned one feature on its own branch, and every feature reads from or writes to the same ingestion pipeline.</p>
+
+    <ol class="steps">
+      <li>
+        <div class="k">01</div>
+        <div><h3>Mock Facebook and the data layer</h3>
+        <p>An Expo and React Native Facebook shell backed by Supabase Postgres: groups, members, posts, images, and comments, with a seed script that fills them with realistic, messy posts. Nest reads only groups the user belongs to. No scraping.</p></div>
+      </li>
+      <li>
+        <div class="k">02</div>
+        <div><h3>Muse service and ingestion</h3>
+        <p>One AI service interface with two adapters, Muse and a mock. Each post is analyzed once and tracked, so reruns cost nothing. Ingestion is triggered three ways: a realtime database subscription on new posts, a five-minute timer as a safety net, and a bounded freshness check before each search. Output is validated, then checked for duplicates by key and by text similarity.</p></div>
+      </li>
+      <li>
+        <div class="k">03</div>
+        <div><h3>Housing search and map</h3>
+        <p>A TypeScript API interprets the sentence with Muse, then a rule-based matcher scores budget, dates, area, and furnishing. The matcher is one module shared by server and app, covered by unit tests built from real failed searches. Homes that cover only part of a stay are shown and labelled as partial. The map is drawn from raw tiles with pan and pinch-zoom, so it runs in Expo Go and on web with no native SDK.</p></div>
+      </li>
+      <li>
+        <div class="k">04</div>
+        <div><h3>Roommate matching</h3>
+        <p>A background worker turns roommate posts into profiles, single-flight so runs never overlap, and each post is judged once. Compatibility is computed in code as matched, conflict, or unknown per criterion, with budgets within 15% counted as workable. Results are ranked by conflicts, not by an opaque score, and shown as a swipe deck.</p></div>
+      </li>
+      <li>
+        <div class="k">05</div>
+        <div><h3>Community</h3>
+        <p>Event and activity posts are parsed by a deterministic adapter, filtered to the user's city and stay dates, de-duplicated across groups, and ranked by neighborhood and interests. We chose plain parsing here: the format was regular enough that a model would add latency without adding accuracy.</p></div>
+      </li>
+    </ol>
+
+    <div class="grid g2 build" style="margin-top:36px">
+      <div class="card">
+        <span class="tag blue">Where AI helped most</span>
+        <h3>Executing a plan we had already made</h3>
+        <ul>
+          <li>Scaffolding screens, schemas, and the ingestion and matching code from a written brief shared by every teammate and every coding agent.</li>
+          <li>Writing tests, then turning each real failure into a new test.</li>
+          <li>Debugging with evidence: we log every query and what Muse understood, so an agent could replay a failed search against the live server and find the cause.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag warn">Where it fell short, and what we changed</span>
+        <h3>Guessing, latency, and rigid logic</h3>
+        <ul>
+          <li>Muse guessed a home type and invented a "downtown" neighborhood, returning zero results. We moved to fixed enums and validate neighborhoods against the database.</li>
+          <li>Muse-written roommate explanations added about 8 seconds per search. We moved explanations into code and made the model optional.</li>
+          <li>AI-written matching was all-or-nothing. We rewrote it around what a person would actually pay, and cut interactive retries from six to two.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="quote">Use the model to <em>understand</em>. Use code to <em>decide</em>.</p>
+  </div>
+</section>
+
+<section class="closing">
+  <div class="wrap">
+    <img src="squishy.png" alt="">
+    <h2>Nest. Find your people. Find your place. Find your community.</h2>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Sources: <a href="https://www.apartments.com/grow/learning-center/young-renters-survey">Apartments.com young renters survey</a> · <a href="https://about.fb.com/news/2024/09/navigating-your-20s-with-facebook/">Meta, Navigating your 20s with Facebook</a>.</p>
+    <p>Nest is a hackathon project built in response to the prompt "Make Facebook valuable for young adults." It is not an official Meta or Facebook product. The demo uses simulated Facebook Groups and seeded posts; no real Facebook content is scraped.</p>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="status"></div>
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Screenshot preview"><img alt=""></div>
+
+<script>
+  // Demo player: each pillar plays its own slice of the screen recording.
+  {
+    const video = document.getElementById("demo");
+    const phone = document.getElementById("phone");
+    const chapters = [...document.querySelectorAll(".chapter")];
+    let current = null;
+    const label = (c, t) => (c.querySelector(".go").innerHTML = t);
+    const clear = () => {
+      for (const c of chapters) { c.classList.remove("on"); c.querySelector(".prog").style.width = "0"; label(c, "&#9654; Play"); }
+      current = null;
+    };
+    const playFrom = (t) => { video.currentTime = t; video.play(); };
+    for (const c of chapters) {
+      c.addEventListener("click", () => {
+        if (current === c) { video.paused ? video.play() : video.pause(); return; }
+        clear();
+        current = c;
+        c.classList.add("on");
+        playFrom(Number(c.dataset.start));
+      });
+    }
+    phone.addEventListener("click", () => {
+      if (!video.paused) return video.pause();
+      if (current && video.currentTime >= Number(current.dataset.end) - 0.2) return playFrom(Number(current.dataset.start));
+      video.play();
+    });
+    document.getElementById("playall").addEventListener("click", () => { clear(); playFrom(0); });
+    video.addEventListener("play", () => { phone.classList.add("playing"); if (current) label(current, "&#10073;&#10073; Pause"); });
+    video.addEventListener("pause", () => { phone.classList.remove("playing"); if (current) label(current, "&#9654; Play"); });
+    video.addEventListener("timeupdate", () => {
+      if (!current) return;
+      const s = Number(current.dataset.start), e = Number(current.dataset.end);
+      current.querySelector(".prog").style.width = Math.max(0, Math.min(100, ((video.currentTime - s) / (e - s)) * 100)) + "%";
+      if (video.currentTime >= e) video.pause();
+    });
+
+    // Click any screenshot to enlarge it.
+    const box = document.getElementById("lightbox");
+    for (const s of document.querySelectorAll(".shot")) {
+      s.addEventListener("click", () => { const i = s.querySelector("img"); box.firstElementChild.src = i.src; box.firstElementChild.alt = i.alt; box.classList.add("open"); });
+    }
+    box.addEventListener("click", () => box.classList.remove("open"));
+    addEventListener("keydown", (e) => { if (e.key === "Escape") box.classList.remove("open"); });
+  }
+</script>
+<script>
+  // Seattle homes on offer in the demo data, by neighborhood (snapshot 2026-11-12).
+  const hoods = [
+    ["South Lake Union", 30, 1352],
+    ["Belltown", 13, 1450],
+    ["Queen Anne", 13, 1350],
+    ["Fremont", 12, 1550],
+    ["Capitol Hill", 11, 1425],
+    ["Ballard", 9, 1475],
+    ["University District", 9, 1297],
+    ["Beacon Hill", 8, 1767],
+  ];
+  const max = Math.max(...hoods.map((h) => h[1]));
+  const money = (n) => "$" + n.toLocaleString("en-US");
+  const bars = document.getElementById("bars");
+  const tbody = document.querySelector("#table tbody");
+  const tip = document.getElementById("tip");
+  for (const [name, count, rent] of hoods) {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.tabIndex = 0;
+    row.setAttribute("aria-label", `${name}: ${count} homes on offer, median room rent ${money(rent)}`);
+    row.innerHTML = `<div class="name">${name}</div><div class="track"><div class="bar" data-w="${(count / max) * 88}"></div><span class="val">${count}</span></div>`;
+    const show = (x, y) => {
+      tip.innerHTML = `<b>${name}</b>${count} homes on offer<br>Median room rent ${money(rent)} per person`;
+      tip.style.opacity = 1;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 14)) + "px";
+      tip.style.top = Math.max(8, y - h - 12) + "px";
+    };
+    row.addEventListener("mousemove", (e) => show(e.clientX, e.clientY));
+    row.addEventListener("focus", () => { const r = row.getBoundingClientRect(); show(r.left + 160, r.top); });
+    row.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+    row.addEventListener("blur", () => (tip.style.opacity = 0));
+    bars.appendChild(row);
+    tbody.insertAdjacentHTML("beforeend", `<tr><td>${name}</td><td>${count}</td><td>${money(rent)}</td></tr>`);
+  }
+
+
+  // What a filter can use in the raw posts vs after Muse, out of 209 demo listings (snapshot 2026-11-12).
+  const TOTAL = 209;
+  const pairData = [
+    ["A move-in date in a format a filter can compare", 0, 206],
+    ["The city the home is in", 41, 209],
+    ["A note of what the post left out", 0, 209],
+  ];
+  const pairs = document.getElementById("pairs");
+  const pbody = document.querySelector("#pairs-table tbody");
+  for (const [title, raw, after] of pairData) {
+    const el = document.createElement("div");
+    el.className = "pair";
+    const line = (cls, n, label) => `<div class="pline" tabindex="0" data-tip="<b>${title}</b>${label}: ${n} of ${TOTAL} (${Math.round((n / TOTAL) * 100)}%)"><div class="ptrack"><div class="pbar ${cls}" data-w="${(n / TOTAL) * 100}"></div></div><span class="pval">${n} of ${TOTAL}</span></div>`;
+    el.innerHTML = `<div class="ptitle">${title}</div>` + line("gray", raw, "Raw post") + line("blue", after, "After Muse");
+    pairs.appendChild(el);
+    pbody.insertAdjacentHTML("beforeend", `<tr><td>${title}</td><td>${raw}</td><td>${after}</td></tr>`);
+  }
+  for (const el of document.querySelectorAll(".pline")) {
+    const show = (x, y) => {
+      tip.innerHTML = el.dataset.tip;
+      tip.style.opacity = 1;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 14)) + "px";
+      tip.style.top = Math.max(8, y - h - 12) + "px";
+    };
+    el.addEventListener("mousemove", (e) => show(e.clientX, e.clientY));
+    el.addEventListener("focus", () => { const r = el.getBoundingClientRect(); show(r.left + 40, r.top); });
+    el.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+    el.addEventListener("blur", () => (tip.style.opacity = 0));
+  }
+
+  // Count up numbers and grow bars when they scroll into view.
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const run = (el) => {
+    if (el.dataset.w) { el.style.width = el.dataset.w + "%"; return; }
+    const target = Number(el.dataset.count), suffix = el.querySelector("span");
+    const set = (v) => { el.firstChild.nodeValue = String(v); };
+    if (reduced) return set(target);
+    const start = performance.now(), dur = 900;
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      set(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { run(e.target); io.unobserve(e.target); }
+  }, { threshold: 0.4 });
+  document.querySelectorAll("[data-count], [data-w]").forEach((el) => io.observe(el));
+</script>
+</body>
+</html>
