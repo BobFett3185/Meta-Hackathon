@@ -1,0 +1,7 @@
+{
+  "asset": "squishy-web-cutout.png",
+  "source": "Built-in image_gen background removal from squishy-smile.png, web only; native retains approved source",
+  "transparentBackground": true,
+  "validation": "Canvas pixel inspection confirmed alpha=0 at (0,0), (50,500), (200,500).",
+  "prompt": "Background removal ONLY. Deliver a clean transparent PNG cutout of this exact periwinkle mascot with its tiny smile, blueberry eyes and three accent strokes. Keep same 1536x1024 framing and exact body silhouette, facial geometry, colors and internal shading. Remove ALL black/dark background, outer glow/haze and surrounding shadow pixels outside the character and accent strokes. Outside the silhouette MUST be completely transparent alpha=0, including all corners and the entire surrounding canvas. No replacement background, no glow, no fog, no vignette. Preserve original wide low squishy character exactly. This is for compositing on a white mobile UI; any dark rectangle or halo is a defect."
+}
