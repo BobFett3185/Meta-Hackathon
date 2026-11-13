@@ -44,12 +44,15 @@ async function mapLimit<T, R>(xs: T[], n: number, fn: (x: T) => Promise<R>): Pro
 export async function ingestPosts(
   input: IngestPost[],
   known: { rawPostId: string; housing: HousingExtraction; text: string; authorId?: string }[] = [],
-  concurrency = 4,
+  concurrency = 8,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<IngestResult> {
   const failed: IngestResult["failed"] = [];
+  let done = 0;
   const analyzed = await mapLimit(input, concurrency, async (p) => {
     try { return { p, a: await analyzePost(p) }; }
     catch (e) { failed.push({ rawPostId: p.id, error: (e as Error).message }); return null; }
+    finally { onProgress?.(++done, input.length); }
   });
 
   const seen = [...known];
