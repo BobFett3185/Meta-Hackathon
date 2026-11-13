@@ -83,6 +83,10 @@ export function evaluateHome(listing, goal) {
     ),
   ];
 }
+// A room is anything typed as a room, or priced per person (a per-person "sublet" or "apartment" is one room
+// in a shared place). Everything else is a whole home. Every listing is exactly one of the two, so the
+// "A room" and "An entire home" choices never leave a listing in a gap that neither can show.
+export const isRoom = (h) => /room/i.test(h.leaseType) || h.rentBasis === "person";
 const confirmed = (m) => m.criteria.slice(0, 4).filter((c) => c.status === "matched").length;
 export function matchHomes(homes, goal) {
   if (goal.intent === "Roommate") return [];
@@ -92,9 +96,9 @@ export function matchHomes(homes, goal) {
       // Only the two explicit choices narrow the search; "either", "any" or anything else shows all.
       (h) =>
         goal.housingType === "room"
-          ? /room/i.test(h.leaseType)
+          ? isRoom(h)
           : goal.housingType === "entire-home"
-            ? !/room/i.test(h.leaseType) && h.rentBasis !== "person" // a per-person sublet is a room, not a whole home
+            ? !isRoom(h)
             : true,
     )
     .map((listing) => ({
