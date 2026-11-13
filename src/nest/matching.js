@@ -1,4 +1,16 @@
-const same = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const same = (a, b) => norm(a) === norm(b);
+// A per-person budget also covers a whole home that costs no more than it. A whole-home budget never
+// covers a per-person price, because the total for the home is unknown.
+const withinBudget = (listing, goal) =>
+  listing.monthlyRent <= goal.budgetAmount &&
+  (listing.rentBasis === goal.budgetBasis || (goal.budgetBasis === "person" && listing.rentBasis === "home"));
+// null = the post states no dates at all. A post with no end date is open-ended.
+const coversDates = (listing, goal) =>
+  !listing.availableFrom && !listing.availableTo
+    ? null
+    : (!listing.availableFrom || listing.availableFrom <= goal.startDate) &&
+      (!listing.availableTo || listing.availableTo >= goal.endDate);
 export function evaluateHome(listing, goal) {
   const criterion = (criterionId, label, matched, evidence) => ({
     criterionId,
@@ -11,16 +23,16 @@ export function evaluateHome(listing, goal) {
     criterion(
       "budget",
       "Within your budget",
-      listing.rentBasis === goal.budgetBasis &&
-        listing.monthlyRent <= goal.budgetAmount,
+      withinBudget(listing, goal),
       `$${listing.monthlyRent} per ${listing.rentBasis === "person" ? "person" : "home"} per month`,
     ),
     criterion(
       "dates",
       "Available for your dates",
-      listing.availableFrom <= goal.startDate &&
-        listing.availableTo >= goal.endDate,
-      `${listing.availableFrom} to ${listing.availableTo}`,
+      coversDates(listing, goal),
+      !listing.availableFrom && !listing.availableTo
+        ? "Dates not stated in the original post"
+        : `${listing.availableFrom || "Available now"} to ${listing.availableTo || "no end date stated"}`,
     ),
     criterion(
       "area",
@@ -56,6 +68,7 @@ export function evaluateHome(listing, goal) {
     ),
   ];
 }
+const confirmed = (m) => m.criteria.slice(0, 4).filter((c) => c.status === "matched").length;
 export function matchHomes(homes, goal) {
   if (goal.intent === "Roommate") return [];
   return homes
@@ -74,7 +87,10 @@ export function matchHomes(homes, goal) {
       listingId: listing.id,
       criteria: evaluateHome(listing, goal),
     }))
-    .filter((m) => m.criteria.slice(0, 4).every((c) => c.status === "matched"))
+    // Budget, dates, area and furnishing must not conflict with the goal. Posts that leave dates out stay in,
+    // marked unknown, and rank below the ones that confirm every criterion.
+    .filter((m) => m.criteria.slice(0, 4).every((c) => c.status !== "not-matched"))
+    .sort((a, b) => confirmed(b) - confirmed(a))
     .slice(0, goal.maxResults)
     .map((m) => ({
       ...m,
@@ -105,4 +121,63 @@ export function toggleSaved(saved, kind, id) {
 }
 export function selectedMatch(matches, id) {
   return matches.find((m) => m.listingId === id) || matches[0] || null;
+}
+
+export function demoRoommateMatches(people, goal) {
+  if (goal.intent === "Home") return [];
+  const rows = people
+    .filter((p) => p.seekingRoommates)
+    .map((p) => {
+      const criterion = (id, label, matched, evidence) => ({
+        criterionId: id,
+        label,
+        status:
+          matched === null ? "unknown" : matched ? "matched" : "not-matched",
+        evidence,
+        explanation: evidence,
+      });
+      return {
+        ...p,
+        criteria: [
+          criterion(
+            "dates",
+            "Your dates overlap",
+            p.dates[0] <= goal.endDate && p.dates[1] >= goal.startDate,
+            `${p.dates[0]} to ${p.dates[1]}`,
+          ),
+          criterion(
+            "budget",
+            "Similar housing budget",
+            goal.budgetBasis === "person" &&
+              p.budgetPerPerson <= goal.budgetAmount,
+            `$${p.budgetPerPerson} per person`,
+          ),
+          criterion(
+            "area",
+            "Shared preferred neighborhood",
+            p.preferredAreas.some((a) =>
+              goal.preferredNeighborhoods.includes(a),
+            ),
+            p.preferredAreas.join(", "),
+          ),
+          criterion(
+            "quiet",
+            "Also prefers a quiet home",
+            goal.preferences.includes("Quiet home") &&
+              p.explicitLivingPreferences.includes("Quiet home")
+              ? true
+              : null,
+            p.originalPostText,
+          ),
+        ],
+      };
+    });
+  const exact = rows.filter(
+    (p) =>
+      goal.sourceIds.includes("interns") &&
+      p.criteria.slice(0, 3).every((c) => c.status === "matched"),
+  );
+  return (
+    exact.length ? exact : rows.map((p) => ({ ...p, isDemoSample: true }))
+  ).slice(0, goal.maxResults);
 }

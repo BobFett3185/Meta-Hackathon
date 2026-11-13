@@ -1,0 +1,6 @@
+{
+  "asset": "squishy-smile.png",
+  "source": "Built-in image_gen edit of squishy-original-periwinkle.png; user requested original shape with a tiny smile",
+  "transparentBackground": true,
+  "prompt": "Make exactly ONE tiny edit to this image: add a cute very small closed curved smile in deep blueberry, centered between and slightly below the two eyes. Smile is a delicate short upward-curving U stroke, no teeth, no open mouth, no cheeks. Preserve absolutely everything else: exact wide low squishy silhouette, body proportions, periwinkle color, existing eye shapes positions and sizes, accent marks upper right, shading and shadow, transparent alpha background, exact landscape framing and padding 1536x1024. Do not redraw or redesign the character. It must be recognizably the exact same original mascot with only a tiny smile added."
+}

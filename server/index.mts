@@ -8,6 +8,7 @@ import { catalog, getSetup } from "./setup";
 import { runIngestion } from "../services/ingestion/run";
 import { adminDb, check } from "../services/ingestion/db";
 import { createPost } from "./posts";
+import {communityEvents,readEvents} from './events';
 import { startRoommateWorker } from "../services/roommates/worker";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -29,6 +30,12 @@ createServer(async (req, res) => {
     return send(200, { generatedAt: data.generatedAt, listings: data.listings, roommates: data.roommates });
   }
   try {
+    if (url.pathname === '/api/community' && req.method === 'POST') return send(200, await communityEvents((await body(req)).goal));
+    if (url.pathname === '/api/events/saved' && req.method === 'POST') {
+      const {ids}=await body(req);
+      if(!Array.isArray(ids)||ids.length>500||ids.some(id=>typeof id!=='string')) return send(400,{error:'Invalid saved event IDs'});
+      return send(200,{events:await readEvents(ids)});
+    }
     if (url.pathname === "/api/interpret" && req.method === "POST") {
       const { text, base, userId } = await body(req);
       const cat = await catalog();

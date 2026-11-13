@@ -12,9 +12,12 @@ import {
   Keyboard,
   Animated,
   AccessibilityInfo,
+  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { imageSource } from "./assets";
+import Squishy from "./Squishy";
+import { lightHaptic } from "./feedback";
 export const colors = {
   bg: "#FAF9F6",
   surface: "#FFFFFF",
@@ -107,79 +110,18 @@ export function Link({ children, onPress, style }) {
     </Pressable>
   );
 }
-export function Mascot({ size = 42, interactive = false }) {
-  const squish = useRef(new Animated.Value(0)).current;
+export function Mascot(props) {
   const reduced = useReducedMotion();
-  const press = (value) => {
-    if (reduced) return;
-    Animated.spring(squish, {
-      toValue: value,
-      stiffness: value ? 450 : 240,
-      damping: value ? 30 : 16,
-      mass: 0.5,
-      useNativeDriver: Platform.OS !== "web",
-    }).start();
-  };
-  const graphic = (
-    <Animated.View
-      style={{
-        transform: [
-          {
-            scaleX: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 1.12],
-            }),
-          },
-          {
-            scaleY: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 0.86],
-            }),
-          },
-          {
-            translateY: squish.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, size * 0.06],
-            }),
-          },
-        ],
-      }}
-    >
-      <Image
-        source={require("./assets/mascot.png")}
-        resizeMode="stretch"
-        style={{
-          width: size * 1.65,
-          height: size * 1.15,
-          position: "absolute",
-          left: -size * 0.25,
-          top: -size * 0.06,
-        }}
-      />
-    </Animated.View>
-  );
-  if (interactive)
-    return (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Give Nest a squish"
-        onPressIn={() => press(1)}
-        onPressOut={() => press(0)}
-        style={{ width: size * 1.16, height: size }}
-      >
-        {graphic}
-      </Pressable>
-    );
-  return (
-    <View
-      accessible={false}
-      style={{ width: size * 1.16, height: size, overflow: "visible" }}
-    >
-      {graphic}
-    </View>
-  );
+  return <Squishy {...props} reduced={reduced} />;
 }
-export function Header({ onBack, title, onSaved, onDemo, children }) {
+export function Header({
+  onBack,
+  title,
+  onSaved,
+  onProfile,
+  onDemo,
+  children,
+}) {
   return (
     <View style={ui.header}>
       <IconAction
@@ -199,11 +141,11 @@ export function Header({ onBack, title, onSaved, onDemo, children }) {
       </View>
       <View style={{ flex: 1 }} />
       {children ||
-        (onSaved && (
+        ((onSaved || onProfile) && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Saved items"
-            onPress={onSaved}
+            accessibilityLabel={onProfile ? "Your Nest profile" : "Saved items"}
+            onPress={onProfile || onSaved}
             style={ui.iconAction}
           >
             <Mascot size={48} />
@@ -281,13 +223,34 @@ export function Sheet({ visible, onClose, title, children, footer }) {
   );
 }
 export function Bookmark({ saved, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const reduced = useReducedMotion();
   return (
-    <IconAction
-      name={saved ? "bookmark" : "bookmark-outline"}
-      label={saved ? "Unsave item" : "Save item"}
-      onPress={onPress}
-      color={saved ? colors.blue : colors.text}
-    />
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <IconAction
+        name={saved ? "bookmark" : "bookmark-outline"}
+        label={saved ? "Unsave item" : "Save item"}
+        onPress={() => {
+          lightHaptic(reduced);
+          if (!reduced)
+            Animated.sequence([
+              Animated.timing(scale, {
+                toValue: 0.8,
+                duration: 80,
+                useNativeDriver: true,
+              }),
+              Animated.spring(scale, {
+                toValue: 1,
+                stiffness: 320,
+                damping: 14,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          onPress();
+        }}
+        color={saved ? colors.blue : colors.text}
+      />
+    </Animated.View>
   );
 }
 export function Reasons({ criteria }) {
@@ -308,153 +271,7 @@ export function Reasons({ criteria }) {
     </View>
   );
 }
-/** Illustrative local map, deliberately independent of a live map SDK. */
-export function MapAdapter({
-  matches,
-  selectedId,
-  onSelect,
-  expanded,
-  onExpand,
-}) {
-  const pins = [
-    { x: 49, y: 48 },
-    { x: 73, y: 76 },
-    { x: 80, y: 42 },
-    { x: 39, y: 84 },
-    { x: 24, y: 22 },
-  ];
-  return (
-    <View
-      accessibilityLabel={`Illustrative map of ${matches[0]?.listing.neighborhood || matches[0]?.listing.city || "your area"}`}
-      style={[ui.map, expanded && { height: 420 }]}
-    >
-      <View
-        style={{
-          position: "absolute",
-          backgroundColor: "#BFE5FA",
-          width: "36%",
-          height: "70%",
-          left: "48%",
-          top: -25,
-          borderBottomLeftRadius: 40,
-          transform: [{ rotate: "-13deg" }],
-        }}
-      />
-      {[12, 30, 49, 68, 88].map((x, i) => (
-        <React.Fragment key={x}>
-          <View
-            style={{
-              position: "absolute",
-              width: 5,
-              height: "130%",
-              left: `${x}%`,
-              top: -10,
-              backgroundColor: "#FFF",
-              transform: [{ rotate: "12deg" }],
-            }}
-          />
-          <View
-            style={{
-              position: "absolute",
-              height: 5,
-              width: "110%",
-              top: `${x}%`,
-              backgroundColor: "#FFF",
-              transform: [{ rotate: "-8deg" }],
-            }}
-          />
-          {i < 3 && (
-            <View
-              style={{
-                position: "absolute",
-                width: 19,
-                height: 25,
-                backgroundColor: "#D8EBBC",
-                left: `${x + 4}%`,
-                top: `${20 + i * 23}%`,
-                transform: [{ rotate: "12deg" }],
-              }}
-            />
-          )}
-        </React.Fragment>
-      ))}
-      <Label
-        style={{
-          position: "absolute",
-          left: "57%",
-          top: 12,
-          fontSize: 13,
-          lineHeight: 15,
-          color: "#4D95C4",
-        }}
-      >
-        Lake{"\n"}Union
-      </Label>
-      <Label
-        style={{ position: "absolute", left: 12, bottom: 4, fontSize: 13 }}
-      >
-        {matches[0]?.listing.city && matches[0].listing.city !== "Unknown"
-          ? matches[0].listing.city
-          : ""}
-      </Label>
-      {matches.map((m, i) => (
-        <Pressable
-          key={m.listingId}
-          accessibilityRole="button"
-          accessibilityLabel={`Map pin ${money(m.listing.monthlyRent)}`}
-          accessibilityState={{ selected: selectedId === m.listingId }}
-          aria-pressed={selectedId === m.listingId}
-          onPress={() => onSelect(m.listingId)}
-          style={{
-            position: "absolute",
-            left: `${pins[i % 5].x}%`,
-            top: `${pins[i % 5].y}%`,
-            transform: [{ translateX: -24 }, { translateY: -16 }],
-            minHeight: 44,
-            minWidth: 48,
-            alignItems: "center",
-          }}
-        >
-          <View
-            style={[
-              ui.pin,
-              selectedId === m.listingId && { backgroundColor: colors.blue },
-            ]}
-          >
-            <Label
-              style={{
-                fontSize: 13,
-                lineHeight: 18,
-                fontWeight: "700",
-                color: selectedId === m.listingId ? "#FFF" : colors.text,
-              }}
-            >
-              {money(m.listing.monthlyRent)}
-            </Label>
-          </View>
-          <View
-            style={{
-              width: 4,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor:
-                selectedId === m.listingId ? colors.blue : colors.text,
-              marginTop: 2,
-            }}
-          />
-        </Pressable>
-      ))}
-      {onExpand && (
-        <IconAction
-          style={ui.expandMap}
-          name="expand-outline"
-          label="Expand map"
-          onPress={onExpand}
-        />
-      )}
-    </View>
-  );
-}
+export { default as MapAdapter } from "./NeighborhoodMap";
 export const ui = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 22, color: colors.text },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -562,10 +379,43 @@ export const ui = StyleSheet.create({
     color: colors.secondary,
   },
   map: {
-    height: 150,
+    height: 220,
     borderRadius: 20,
     overflow: "hidden",
     backgroundColor: "#EEF0E7",
+  },
+  mapControls: { position: "absolute", right: 8, top: 8, zIndex: 3 },
+  mapButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  mapButtonTop: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  mapButtonBottom: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.divider,
+  },
+  mapCredit: {
+    position: "absolute",
+    left: 6,
+    bottom: 3,
+    zIndex: 3,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.secondary,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
   },
   pin: {
     backgroundColor: "#FFF",
@@ -577,13 +427,6 @@ export const ui = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  expandMap: {
-    position: "absolute",
-    right: 4,
-    top: 4,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
   },
   input: {
     padding: 16,

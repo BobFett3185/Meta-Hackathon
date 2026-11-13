@@ -1,0 +1,6 @@
+{
+  "asset": "squishy-original-periwinkle.png",
+  "source": "Built-in image_gen color-only edit of mascot.png, requested by user to restore original character",
+  "transparentBackground": true,
+  "prompt": "Strict color-only edit of the attached original mascot. Do NOT redesign, reshape, reframe, resize, or change its proportions. Preserve exact original 1536x1024 landscape composition, silhouette, broad squat rounded pebble body, eye positions/sizes, the three dark accent marks above its upper-right side, surface lighting, highlights, shading, shadow, and transparent alpha background. Only replace the cream/yellow body hue with soft periwinkle (#AAA8ED midtone), preserving its original luminance and shading. Only recolor the two existing dark oval eyes to deep blueberry (#303565). Everything else stays exactly as original. The user disliked a previous taller triangular redesign: absolutely retain this exact original wide low squishy shape and all original details. No accessories, mouth, extra elements, or altered padding."
+}

@@ -11,7 +11,7 @@ const GOAL_SCHEMA = {
     endDate: { type: ["string", "null"] },
     budgetAmount: { type: ["number", "null"] },
     budgetBasis: { type: ["string", "null"], enum: ["person", "home", null] },
-    housingType: { type: ["string", "null"] },
+    housingType: { type: ["string", "null"], enum: ["room", "entire-home", "either", null] },
     furnishedRequirement: { type: ["boolean", "null"] },
     roommateCount: { type: ["number", "null"] },
     alreadyHasHome: { type: ["boolean", "null"] },
@@ -30,7 +30,8 @@ Rules:
 - intent: "Home" (just housing), "Roommate" (just a roommate), "Both" if they want a place AND someone to share with.
 - Dates are YYYY-MM-DD. "June-August 2027" => startDate 2027-06-01, endDate 2027-08-31. A month with no year means its next occurrence after today.
 - budgetBasis: "person" for "each", "per person", "my share"; "home" for "total"/"whole place". null if they gave a budget but not which.
-- preferredNeighborhoods: neighborhoods they name. Prefer the canonical names above when they match, and expand common local abbreviations to the full neighborhood name. Empty if they only name a city.
+- housingType: "room" only if they ask for a room or a shared place; "entire-home" only if they ask for a whole apartment, studio or house to themselves; "either" if they say anything works; null if they do not say.
+- preferredNeighborhoods: neighborhoods they name. Prefer the canonical names above when they match, and expand common local abbreviations to the full neighborhood name. If they name a broad area that is not a neighborhood above ("downtown", "near the university", "close to Amazon HQ"), return the known neighborhoods above that are inside or directly next to that area. Empty if they only name a city.
 - preferences: short lifestyle wishes ("Quiet home", "Near work", "Pet friendly", "Non-smoker").
 - missing: if the city, budget or dates are absent, a short friendly question asking for the most important missing item; otherwise null.`;
 
@@ -45,6 +46,7 @@ export async function interpret(text: string, base: any, ctx: Ctx): Promise<Inte
   const r: any = await ai.completeJSON({
     name: "SearchGoal", schema: GOAL_SCHEMA,
     system: system(new Date().toISOString().slice(0, 10), ctx, base?.city ?? ""), user: text,
+    retries: 2, // someone is waiting on this: fail in seconds, not minutes
   });
   const pick = (v: any, fb: any) => (v === null || v === undefined || (Array.isArray(v) && !v.length) ? fb : v);
   const city = pick(r.city, base.city);
