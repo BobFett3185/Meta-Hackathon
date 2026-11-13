@@ -37,6 +37,8 @@ The product brief specifies Next.js, TypeScript, Tailwind CSS, shadcn/ui, Lucide
 
    ```sh
    npx expo start --tunnel --clear
+
+   npm run dev -- --tunnel --clear
    ```
 
    `--tunnel` works on any network, including campus or venue Wi-Fi that blocks device-to-device traffic. If your phone and computer share a home network or a phone hotspot, `npx expo start --lan --clear` is faster.
