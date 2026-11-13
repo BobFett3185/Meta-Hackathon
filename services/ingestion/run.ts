@@ -1,6 +1,7 @@
 import { adminDb, check } from "./db";
 import { getAI } from "../ai";
 import { ingestPosts, type IngestPost } from "./ingest";
+import { findDuplicate } from "../ai";
 import { toHomeListing } from "./to-listing";
 import { toRoommate } from "./to-roommate";
 
@@ -103,4 +104,48 @@ async function retry<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
       await new Promise((r) => setTimeout(r, 1500 * 2 ** i));
     }
   }
+}
+
+/**
+ * Recompute duplicates, listings and roommates from the Muse output already stored in nest_ingested_posts.
+ * No Muse calls: use after changing dedupe or mapping logic.
+ */
+export async function rebuildDerived() {
+  const db = adminDb();
+  const posts: any[] = check(await db.from("fb_posts")
+    .select("id,title,body,author_id,created_at,group:fb_groups(id,name),author:fb_users!author_id(name,avatar_url),images:fb_post_images(url,position)")
+    .order("created_at"), "read fb_posts");
+  const stored: any[] = check(await db.from("nest_ingested_posts").select("post_id,category,confidence,provider,needs_review,analysis"), "read ingested");
+  const byPost = new Map(stored.map((r) => [r.post_id, r]));
+  const known: { rawPostId: string; housing: any; text: string; authorId?: string }[] = [];
+  const updates: any[] = [], listings: any[] = [], roommates: any[] = [];
+  for (const p of posts) {
+    const row = byPost.get(p.id);
+    if (!row) continue;
+    const post: IngestPost = {
+      id: p.id, authorId: p.author_id, authorName: p.author?.name, authorAvatar: p.author?.avatar_url,
+      communityId: p.group?.id ?? undefined, communityName: p.group?.name ?? undefined, content: [p.title, p.body].filter(Boolean).join("\n"),
+      imageUrls: (p.images ?? []).sort((a: any, b: any) => a.position - b.position).map((i: any) => i.url),
+    };
+    const a = row.analysis;
+    let duplicateOf: string | null = null;
+    if (a.housing) {
+      const idx = findDuplicate({ housing: a.housing, text: post.content, authorId: post.authorId }, known);
+      if (idx >= 0) duplicateOf = known[idx].rawPostId; else known.push({ rawPostId: p.id, housing: a.housing, text: post.content, authorId: post.authorId });
+    }
+    const r = { rawPostId: p.id, category: row.category, confidence: row.confidence, provider: row.provider, housing: a.housing, item: a.item,
+      summary: a.summary, duplicateOf, needsReview: row.needs_review };
+    updates.push({ post_id: p.id, category: row.category, confidence: row.confidence, provider: row.provider, needs_review: row.needs_review, analysis: a, duplicate_of: duplicateOf });
+    if (!duplicateOf) {
+      const l = toHomeListing(post, r as any);
+      if (l) listings.push({ post_id: p.id, city: l.city, neighborhood: l.neighborhood, monthly_rent: l.monthlyRent, rent_basis: l.rentBasis,
+        source_id: l.sourceId, available_from: toDate(l.availableFrom), available_to: toDate(l.availableTo), listing: l });
+      const m = toRoommate(post, r as any);
+      if (m) roommates.push({ post_id: p.id, author_id: post.authorId ?? null, budget: m.budgetPerPerson, city: m.city, source_id: m.sourceId, profile: m });
+    }
+  }
+  for (const t of ["nest_listings", "nest_roommates"]) await retry(async () => check(await db.from(t).delete().not("post_id", "is", null), `clear ${t}`));
+  for (const [table, data] of [["nest_ingested_posts", updates], ["nest_listings", listings], ["nest_roommates", roommates]] as const)
+    for (const c of chunk(data as any[])) await retry(async () => check(await db.from(table).upsert(c), `write ${table}`));
+  return { posts: updates.length, duplicates: updates.filter((u) => u.duplicate_of).length, listings: listings.length, roommates: roommates.length };
 }

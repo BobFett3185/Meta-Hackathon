@@ -1,6 +1,7 @@
 // Tiny API for the Expo app. Keeps the Muse key server-side; the client only ever sees extracted listings.
 // Run: npm run server   (default http://localhost:8787)
 import { createServer } from "node:http";
+import { networkInterfaces } from "node:os";
 import { interpret } from "./interpret";
 import { loadData, logQuery, search } from "./search";
 import { catalog, getSetup } from "./setup";
@@ -50,7 +51,10 @@ createServer(async (req, res) => {
     }
   } catch (e) { return send(500, { error: (e as Error).message }); }
   send(404, { error: "Not found" });
-}).listen(PORT, () => console.log(`Nest API on http://localhost:${PORT}`));
+}).listen(PORT, () => {
+  const lan = Object.values(networkInterfaces()).flat().filter((i) => i && i.family === "IPv4" && !i.internal).map((i) => `http://${i!.address}:${PORT}`);
+  console.log(`Nest API listening on http://localhost:${PORT}${lan.length ? `  (phones on your Wi-Fi: ${lan.join(", ")})` : ""}`);
+});
 
 // Scheduled ingestion. Cheap when nothing is new (one read, no Muse calls). INGEST_INTERVAL_MIN=0 disables.
 const every = Number(process.env.INGEST_INTERVAL_MIN ?? 5);

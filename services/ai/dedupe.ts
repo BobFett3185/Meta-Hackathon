@@ -17,18 +17,25 @@ export function dedupeKey(h: HousingExtraction): string | null {
   return [place, h.rent, h.bedrooms ?? "", h.listing_type ?? ""].join("|");
 }
 
-/** Fuzzy check for reposts / cross-posts of the same listing. */
+/** Fuzzy check for reposts / cross-posts of the same listing. Conflicting facts always mean "not a duplicate". */
 export function isLikelyDuplicate(
   a: { housing: HousingExtraction; text: string; authorId?: string },
   b: { housing: HousingExtraction; text: string; authorId?: string },
 ): boolean {
+  const ra = a.housing.rent, rentB = b.housing.rent;
+  if (ra != null && rentB != null && ra !== rentB) return false;
+  const la = norm(a.housing.location), lb = norm(b.housing.location);
+  if (la && lb && la !== lb) return false;
+  const ca = norm(a.housing.city), cb = norm(b.housing.city);
+  if (ca && cb && ca !== cb) return false;
   const ka = dedupeKey(a.housing), kb = dedupeKey(b.housing);
   if (ka && ka === kb) return true;
-  const sameRent = a.housing.rent != null && a.housing.rent === b.housing.rent;
-  const sameLoc = norm(a.housing.location) !== "" && norm(a.housing.location) === norm(b.housing.location);
   const textSim = jaccard(tokens(a.text), tokens(b.text));
-  if (textSim >= 0.8) return true;
-  return sameRent && sameLoc && textSim >= 0.45;
+  const sameAuthor = !!a.authorId && a.authorId === b.authorId;
+  const sameRent = ra != null && ra === rentB;
+  // Templated posts from different people share wording, so text alone only counts for the same author.
+  if (sameAuthor && textSim >= 0.6) return true;
+  return sameRent && !!la && la === lb && textSim >= 0.6;
 }
 
 /** Returns the index of the first existing listing the candidate duplicates, or -1. */

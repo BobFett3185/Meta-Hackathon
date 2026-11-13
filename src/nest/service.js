@@ -1,11 +1,23 @@
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { events, people } from "./fixtures"; // Community tab demo data only (no Supabase tables for events yet)
 import { toggleSaved } from "./matching";
 import { getMe } from "../api";
 const KEY = "nest.v2";
-// Nest API: the server holds the Muse key and reads Supabase. On a physical device set
-// EXPO_PUBLIC_NEST_API_URL to your computer's LAN IP (e.g. http://192.168.1.20:8787).
-const API = process.env.EXPO_PUBLIC_NEST_API_URL || "http://localhost:8787";
+// Nest API: the server holds the Muse key and reads Supabase.
+// Resolution order: EXPO_PUBLIC_NEST_API_URL, then the same machine that serves the Expo bundle
+// (so phones on the LAN reach your computer automatically), then the Android emulator alias / localhost.
+const API_PORT = process.env.EXPO_PUBLIC_NEST_API_PORT || "8787";
+function resolveApi() {
+  if (process.env.EXPO_PUBLIC_NEST_API_URL) return process.env.EXPO_PUBLIC_NEST_API_URL;
+  const hostUri = Constants.expoConfig?.hostUri || Constants.expoGoConfig?.debuggerHost;
+  const host = hostUri?.split(":")[0];
+  if (host && !host.endsWith(".exp.direct")) return `http://${host}:${API_PORT}`;
+  if (Platform.OS === "web" && typeof window !== "undefined") return `http://${window.location.hostname}:${API_PORT}`;
+  return `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:${API_PORT}`;
+}
+const API = resolveApi();
 async function api(path, body) {
   const userId = (await getMe()).id; // lets the backend tie queries to the user
   let res;
@@ -17,7 +29,7 @@ async function api(path, body) {
     });
   } catch {
     throw new Error(
-      `Can't reach the Nest server at ${API}. Start it with "npm run server".`,
+      `Can't reach the Nest server at ${API}. Start everything with "npm run dev" (or "npm run server" in a second terminal). In Expo tunnel mode, set EXPO_PUBLIC_NEST_API_URL.`,
     );
   }
   if (!res.ok) {
