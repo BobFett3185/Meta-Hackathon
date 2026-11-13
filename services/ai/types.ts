@@ -59,5 +59,5 @@ export interface AIService {
   readonly provider: "muse" | "mock";
   analyzePost(post: RawPostInput): Promise<PostAnalysis>;
   /** Schema-constrained JSON completion for server-side features (query interpretation, etc.). Muse only. */
-  completeJSON?<T = unknown>(opts: { system: string; user: string; schema: object; name: string }): Promise<T>;
+  completeJSON?<T = unknown>(opts: { system: string; user: string; schema: object; name: string; retries?: number }): Promise<T>;
 }

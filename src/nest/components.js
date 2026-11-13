@@ -12,6 +12,7 @@ import {
   Keyboard,
   Animated,
   AccessibilityInfo,
+  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { imageSource } from "./assets";
@@ -378,10 +379,43 @@ export const ui = StyleSheet.create({
     color: colors.secondary,
   },
   map: {
-    height: 150,
+    height: 220,
     borderRadius: 20,
     overflow: "hidden",
     backgroundColor: "#EEF0E7",
+  },
+  mapControls: { position: "absolute", right: 8, top: 8, zIndex: 3 },
+  mapButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  mapButtonTop: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  mapButtonBottom: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.divider,
+  },
+  mapCredit: {
+    position: "absolute",
+    left: 6,
+    bottom: 3,
+    zIndex: 3,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.secondary,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
   },
   pin: {
     backgroundColor: "#FFF",
@@ -393,13 +427,6 @@ export const ui = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  expandMap: {
-    position: "absolute",
-    right: 4,
-    top: 4,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
   },
   input: {
     padding: 16,

@@ -43,12 +43,12 @@ export class MuseAI implements AIService {
     }
   }
 
-  async completeJSON<T = unknown>({ system, user, schema, name }: { system: string; user: string; schema: object; name: string }): Promise<T> {
+  async completeJSON<T = unknown>({ system, user, schema, name, retries }: { system: string; user: string; schema: object; name: string; retries?: number }): Promise<T> {
     const content = await this.chat({
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
       response_format: { type: "json_schema", json_schema: { name, schema } },
       reasoning_effort: "low",
-    });
+    }, retries);
     return JSON.parse(content) as T;
   }
 
