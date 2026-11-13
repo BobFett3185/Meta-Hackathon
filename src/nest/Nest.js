@@ -40,6 +40,7 @@ import {
 import Intake from "./Intake";
 import Community, {EventDetails} from "./Community";
 import {hasStay} from "./event-utils.mjs";
+import {loadSearchResults} from './search-results.mjs';
 import { imageSource } from "./assets";
 import Profile from "./ProfileScreen";
 import { profileFromGoal, emptyProfile } from "./profileData";
@@ -82,6 +83,8 @@ function NestScreen({ onExit }) {
   const [draft, setDraft] = useState(null);
   const [matches, setMatches] = useState([]);
   const [roommates, setRoommates] = useState([]);
+  const [roommatesLoading,setRoommatesLoading]=useState(false);
+  const [roommatesError,setRoommatesError]=useState(null);
   const [community, setCommunity] = useState({ events: [], people: [] });
   const [communityStatus,setCommunityStatus]=useState('idle');
   const [communityError,setCommunityError]=useState(null);
@@ -201,19 +204,13 @@ function NestScreen({ onExit }) {
   const fetchResults = useCallback(async (search, refreshing = false) => {
     const version = ++request.current;
     setStatus(refreshing ? "refresh" : "loading");
-    try {
-      const [homes, people] = await Promise.all([
-        search.intent === "Roommate" ? [] : nestService.getHomeMatches(search),
-        search.intent === "Home" ? [] : nestService.getRoommateMatches(search),
-      ]);
-      if (version !== request.current) return;
-      setMatches(homes);
-      setRoommates(people);
-      setUpdatedAt(new Date().toISOString());
-      setStatus("idle");
-    } catch {
-      if (version === request.current) setStatus("error");
-    }
+    setRoommatesLoading(search.intent!=='Home');setRoommatesError(null);
+    await loadSearchResults(search,nestService,{
+      homes: rows=>{if(version===request.current){setMatches(rows);setUpdatedAt(new Date().toISOString());setStatus('idle');}},
+      people: rows=>{if(version===request.current){setRoommates(rows);setRoommatesLoading(false);}},
+      homeError: ()=>{if(version===request.current)setStatus('error');},
+      peopleError: ()=>{if(version===request.current){setRoommatesLoading(false);setRoommatesError('Could not load roommate matches. Your housing results are still available.');}},
+    });
   }, []);
   useEffect(() => {
     let live = true;
@@ -305,7 +302,7 @@ function NestScreen({ onExit }) {
       notify("Search saved on this device. Cloud sync is unavailable.");
   };
   const confirm = async (value) => {
-    if (value.intent === "Home") return finishSearch(value);
+    if (value.intent !== "Roommate") return finishSearch(value);
     setPendingGoal(value);
     setIntake(null);
     setRoute({
@@ -588,15 +585,15 @@ function NestScreen({ onExit }) {
                   display: tab === "Roommates" ? "flex" : "none",
                 }}
               >
-                <Roommates
+                  {roommatesLoading ? <ActivityIndicator color={colors.blue} accessibilityLabel="Loading roommate matches"/> : roommatesError ? <View style={{padding:20,gap:12}}><Label>{roommatesError}</Label><Button onPress={()=>fetchResults(goal,true)}>Retry roommate search</Button></View> : <Roommates
                   goal={goal}
                   people={roommates}
                   saved={store.saved.people}
                   onSave={(id) => save("people", id)}
                   onOpen={(item) => setRoute({ type: "person", item })}
                   onCriteria={criteria}
-                  onEdit={() => openIntake()}
-                />
+                    onEdit={() => openIntake()}
+                  />}
               </View>
             )}
             <View

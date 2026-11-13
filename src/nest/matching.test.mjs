@@ -11,7 +11,7 @@ import {
 test("demo shows labeled samples for incompatible filters without changing the goal", () => {
   for (const patch of [
     { housingType: "entire-home" },
-    { budgetBasis: "home" },
+    { budgetBasis: "home", housingType: "either" },
     { preferredNeighborhoods: ["Capitol Hill"] },
     { budgetAmount: 100 },
     { sourceIds: [] },
@@ -30,10 +30,10 @@ test("demo shows labeled samples for incompatible filters without changing the g
   assert.equal(samples.length, 2);
   assert.equal(samples[0].criteria[0].status, "not-matched");
 });
-test("per-person prices are never treated as whole-home rent", () => {
+test("a household budget accounts for per-person rent when seeking a household", () => {
   assert.equal(matchHomes(homes, demoGoal).length, 5);
   assert.equal(
-    matchHomes(homes, { ...demoGoal, budgetBasis: "home" }).length,
+    matchHomes(homes, { ...demoGoal, budgetBasis: "home", housingType: "either" }).length,
     0,
   );
 });
@@ -139,4 +139,12 @@ test("a whole-home budget covers a room when the per-person price times the hous
   const pair = { ...solo, intent: "Both", roommateCount: 1 };
   assert.equal(matchHomes([room], pair).length, 1);
   assert.equal(matchHomes([room], { ...pair, roommateCount: 2 }).length, 0);
+});
+test('Both keeps a single-room housing budget independent of desired roommates',()=>{
+  const goal={...demoGoal,intent:'Both',housingType:'room',budgetBasis:'home',budgetAmount:2150,roommateCount:1};
+  const room={...homes[0],monthlyRent:1375,rentBasis:'person',leaseType:'Private room'};
+  assert.equal(matchHomes([room],goal).length,1);
+  assert.equal(matchHomes([room],{...goal,roommateCount:3}).length,1);
+  assert.equal(matchHomes([{...room,monthlyRent:2200}],goal).length,0);
+  assert.deepEqual(matchHomes(homes,goal).map(m=>m.listingId),matchHomes(homes,{...goal,intent:'Home'}).map(m=>m.listingId));
 });

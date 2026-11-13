@@ -76,13 +76,13 @@ async function ensureFresh(ms = 12_000) {
   catch (e) { console.warn("[fresh]", (e as Error).message); }
 }
 
-export async function search(input: any, query?: string, userId?: string) {
+export async function search(input: any, query?: string, userId?: string, kind?: 'homes' | 'roommates') {
   await ensureFresh();
   const d = await loadData();
   const goal = { ...input, preferredNeighborhoods: knownNeighborhoods(input, d.listings) };
-  const homes = goal.intent === "Roommate" && goal.alreadyHasHome === false ? [] : matchHomes(d.listings.filter(offersHome), goal);
+  const homes = kind==='roommates' || (goal.intent === "Roommate" && goal.alreadyHasHome === false) ? [] : matchHomes(d.listings.filter(offersHome), goal);
   // Roommate matching lives in services/roommates; falls back to the simple filter if roommate_profiles is unavailable.
-  const roommates = await searchRoommates(goal).catch((e) => { console.warn("[roommates]", (e as Error).message); return roommateMatches(d.roommates, goal); });
+  const roommates = kind==='homes' ? [] : await searchRoommates(goal).catch((e) => { console.warn("[roommates]", (e as Error).message); return roommateMatches(d.roommates, goal); });
   void logQuery({ userId, kind: "search", raw: query ?? goal.rawPrompt ?? "", goal, homes: homes.length, roommates: roommates.length });
   return { generatedAt: d.generatedAt, homes, roommates, considered: { listings: d.listings.length, roommates: d.roommates.length } };
 }

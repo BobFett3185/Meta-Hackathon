@@ -45,8 +45,8 @@ createServer(async (req, res) => {
     }
     if (url.pathname === "/api/setup" && req.method === "POST") return send(200, await getSetup((await body(req)).userId));
     if (url.pathname === "/api/search" && req.method === "POST") {
-      const { goal, query, userId } = await body(req);
-      return send(200, await search(goal, query, userId));
+      const { goal, query, userId, kind } = await body(req);
+      return send(200, await search(goal, query, userId, kind));
     }
     // Demo helper: publish a post into a group (as if posted on Facebook), then ingest it right away.
     if (url.pathname === "/api/posts" && req.method === "POST") return send(200, await createPost(await body(req)));

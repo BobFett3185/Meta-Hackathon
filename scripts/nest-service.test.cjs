@@ -52,7 +52,10 @@ test('merged service preserves API search, local profiles, migration and cloud f
   const goal={rawPrompt:'Find both',intent:'Both'};
   const [homes,people]=await Promise.all([service.getHomeMatches(goal),service.getRoommateMatches(goal)]);
   assert.equal(homes[0].listingId,'live-home'); assert.equal(people[0].id,'live-person');
-  assert.equal(calls.filter(x=>x.url.endsWith('/api/search')).length,1);
+  const searches=calls.filter(x=>x.url.endsWith('/api/search'));
+  assert.equal(searches.length,2);
+  assert.deepEqual(searches.map(x=>x.body.kind).sort(),['homes','roommates']);
+  assert.ok(searches.every(x=>x.body.goal.intent==='Both'));
   assert.ok(calls.every(x=>x.body.userId==='user-123'));
   assert.ok(calls.every(x=>x.url.startsWith('http://192.168.1.5:8787/')));
   assert.equal((await service.saveGoal(goal)).persistence,'local-only');

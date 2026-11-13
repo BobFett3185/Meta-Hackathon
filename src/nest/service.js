@@ -49,14 +49,14 @@ async function api(path, body) {
 let setup = null;
 // Last live results, so saved items and details can resolve ids.
 let live = { homes: [], roommates: [] };
-// Dedupes the parallel homes + roommates calls only; refresh and retry always re-query.
+// Coalesces consecutive identical requests within one result stream.
 let lastSearch = { key: "", at: 0, promise: null };
-function search(goal) {
-  const key = JSON.stringify(goal);
+function search(goal, kind) {
+  const key = JSON.stringify({goal,kind});
   if (lastSearch.key !== key || Date.now() - lastSearch.at > 2000) {
-    const promise = api("/api/search", { goal, query: goal.rawPrompt }).then(
+      const promise = api("/api/search", { goal, query: goal.rawPrompt, kind }).then(
       (r) => {
-        live = { homes: r.homes.map((m) => m.listing), roommates: r.roommates };
+          live = { homes: kind==='roommates'?live.homes:r.homes.map((m) => m.listing), roommates:kind==='homes'?live.roommates:r.roommates };
         return r;
       },
     );
@@ -177,8 +177,8 @@ export const nestService = {
   saveDraft: (draft) => patch({ draft }),
   // Live results: everything Muse extracted from the user's groups, read from Supabase by the server.
   // Everything Muse extracted from the groups, read from Supabase by the server.
-  getHomeMatches: async (goal) => (await search(goal)).homes,
-  getRoommateMatches: async (goal) => (await search(goal)).roommates,
+  getHomeMatches: async (goal) => (await search(goal,'homes')).homes,
+  getRoommateMatches: async (goal) => (await search(goal,'roommates')).roommates,
   getCommunity: async (goal) => ({events:(await fetchEvents(supabase)).filter(e=>eligible(e,goal)),people:[],fetchedAt:new Date().toISOString()}),
   updateSearchSchedule: async (cadence, notificationsEnabled) => {
     const { goal } = await load();
