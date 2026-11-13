@@ -99,3 +99,21 @@ test('home type and intent affect listing results without changing the draft', (
   assert.equal(matchHomes(homes, {...demoGoal, intent: 'Roommate'}).length, 0);
   assert.equal(demoGoal.housingType, 'room');
 });
+test("a per-person budget also covers a whole home that costs no more", () => {
+  const studio = { ...homes[0], id: "studio", rentBasis: "home", leaseType: "Studio", monthlyRent: 1400 };
+  const goal = { ...demoGoal, housingType: "either" };
+  assert.equal(matchHomes([studio], goal).length, 1);
+  assert.equal(matchHomes([{ ...studio, monthlyRent: 1600 }], goal).length, 0);
+});
+test("open-ended and undated posts are not dropped, and undated ones rank last", () => {
+  const openEnded = { ...homes[0], id: "open", availableTo: "" };
+  const undated = { ...homes[0], id: "undated", availableFrom: "", availableTo: "" };
+  const matches = matchHomes([undated, openEnded], demoGoal);
+  assert.deepEqual(matches.map((m) => m.listingId), ["open", "undated"]);
+  assert.equal(matches[1].criteria.find((c) => c.criterionId === "dates").status, "unknown");
+  assert.equal(matchHomes([{ ...openEnded, availableFrom: "2027-07-01" }], demoGoal).length, 0);
+});
+test("neighborhood names match regardless of punctuation and case", () => {
+  const goal = { ...demoGoal, preferredNeighborhoods: ["south lake-union"] };
+  assert.equal(matchHomes(homes, goal).length, 5);
+});

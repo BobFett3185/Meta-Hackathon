@@ -12,6 +12,7 @@ import {
   Keyboard,
   Animated,
   AccessibilityInfo,
+  PanResponder,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { imageSource } from "./assets";
@@ -308,7 +309,44 @@ export function Reasons({ criteria }) {
     </View>
   );
 }
-/** Illustrative local map, deliberately independent of a live map SDK. */
+// Real, pannable map drawn from raster tiles, so it works in Expo Go and on web without a native map SDK.
+// Pins sit at the coordinates Muse extracted, which are neighborhood-level, so the map says "approximate".
+const TILE = 256;
+const MIN_ZOOM = 9;
+const MAX_ZOOM = 17;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const project = (lat, lng, zoom) => {
+  const n = TILE * 2 ** zoom;
+  const s = Math.sin((clamp(lat, -85, 85) * Math.PI) / 180);
+  return {
+    x: ((lng + 180) / 360) * n,
+    y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n,
+  };
+};
+const unproject = (x, y, zoom) => {
+  const n = TILE * 2 ** zoom;
+  return {
+    lng: (x / n) * 360 - 180,
+    lat: (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI,
+  };
+};
+const located = (m) => !!(m.listing.latitude && m.listing.longitude);
+/** The view that shows every located home with room for the pins and controls. */
+function fitView(matches, width, height) {
+  const pts = matches.filter(located).map((m) => project(m.listing.latitude, m.listing.longitude, 0));
+  if (!pts.length) return null;
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const room = Math.min(
+    (width - 130) / Math.max(x1 - x0, 1e-9),
+    (height - 110) / Math.max(y1 - y0, 1e-9),
+  );
+  // A single home, or several at one spot, gets a neighborhood-level view instead of maximum zoom.
+  const zoom = clamp(Math.log2(Math.max(room, 1)), MIN_ZOOM, 15);
+  // Price labels sit above their point, so centre slightly high to keep the top label inside the map.
+  return { ...unproject((x0 + x1) / 2, (y0 + y1) / 2 - 12 / 2 ** zoom, 0), zoom };
+}
 export function MapAdapter({
   matches,
   selectedId,
@@ -316,143 +354,226 @@ export function MapAdapter({
   expanded,
   onExpand,
 }) {
-  const pins = [
-    { x: 49, y: 48 },
-    { x: 73, y: 76 },
-    { x: 80, y: 42 },
-    { x: 39, y: 84 },
-    { x: 24, y: 22 },
-  ];
+  const [size, setSize] = useState(null);
+  const [view, setViewState] = useState(null);
+  const viewRef = useRef(null);
+  const gesture = useRef(null);
+  const frame = useRef(null);
+  const setView = (next) => {
+    viewRef.current = next;
+    setViewState(next);
+  };
+  const animateTo = (target) => {
+    cancelAnimationFrame(frame.current);
+    const from = viewRef.current;
+    if (!from) return setView(target);
+    const started = Date.now();
+    const step = () => {
+      const p = Math.min(1, (Date.now() - started) / 220);
+      const e = 1 - (1 - p) ** 3;
+      setView({
+        lat: from.lat + (target.lat - from.lat) * e,
+        lng: from.lng + (target.lng - from.lng) * e,
+        zoom: from.zoom + (target.zoom - from.zoom) * e,
+      });
+      if (p < 1) frame.current = requestAnimationFrame(step);
+    };
+    step();
+  };
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  // Frame all results whenever the result set (or the map size) changes.
+  const ids = matches.map((m) => m.listingId).join("|");
+  useEffect(() => {
+    if (size) setView(fitView(matches, size.width, size.height));
+  }, [ids, size?.width, size?.height]);
+  // Bring a newly selected home into view if it is off-screen or under the controls.
+  useEffect(() => {
+    const v = viewRef.current;
+    const m = matches.find((x) => x.listingId === selectedId);
+    if (!v || !size || !m || !located(m)) return;
+    const c = project(v.lat, v.lng, v.zoom);
+    const p = project(m.listing.latitude, m.listing.longitude, v.zoom);
+    const x = p.x - c.x + size.width / 2;
+    const y = p.y - c.y + size.height / 2;
+    if (x < 40 || x > size.width - 60 || y < 30 || y > size.height - 30)
+      animateTo({ lat: m.listing.latitude, lng: m.listing.longitude, zoom: v.zoom });
+  }, [selectedId]);
+  const zoomBy = (delta) => {
+    const v = viewRef.current;
+    if (v) animateTo({ ...v, zoom: clamp(Math.round(v.zoom + delta), MIN_ZOOM, MAX_ZOOM) });
+  };
+  const recenter = () => {
+    const target = size && fitView(matches, size.width, size.height);
+    if (target) animateTo(target);
+  };
+  // One finger drags the map, two fingers pinch to zoom. Taps still reach the pins and buttons.
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (e, g) =>
+        (e.nativeEvent.touches?.length || 1) > 1 || Math.abs(g.dx) + Math.abs(g.dy) > 6,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        cancelAnimationFrame(frame.current);
+        gesture.current = null;
+      },
+      onPanResponderMove: (e, g) => {
+        const current = viewRef.current;
+        if (!current) return;
+        const touches = e.nativeEvent.touches || [];
+        const fingers = touches.length > 1 ? 2 : 1;
+        const spread =
+          fingers === 2
+            ? Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY)
+            : 0;
+        let start = gesture.current;
+        // Re-anchor whenever a finger is added or lifted so the map never jumps.
+        if (!start || start.fingers !== fingers)
+          start = gesture.current = { fingers, dx: g.dx, dy: g.dy, spread, view: current };
+        const zoom =
+          fingers === 2 && start.spread
+            ? clamp(start.view.zoom + Math.log2(spread / start.spread), MIN_ZOOM, MAX_ZOOM)
+            : start.view.zoom;
+        const c = project(start.view.lat, start.view.lng, zoom);
+        setView({ ...unproject(c.x - (g.dx - start.dx), c.y - (g.dy - start.dy), zoom), zoom });
+      },
+      onPanResponderRelease: () => (gesture.current = null),
+      onPanResponderTerminate: () => (gesture.current = null),
+    }),
+  ).current;
+
+  const ready = size && view;
+  const tiles = [];
+  const pins = [];
+  if (ready) {
+    const { width, height } = size;
+    const z = clamp(Math.round(view.zoom), MIN_ZOOM, MAX_ZOOM);
+    const scale = 2 ** (view.zoom - z);
+    const c = project(view.lat, view.lng, z);
+    const count = 2 ** z;
+    for (let x = Math.floor((c.x - width / 2 / scale) / TILE); x <= Math.floor((c.x + width / 2 / scale) / TILE); x++)
+      for (let y = Math.floor((c.y - height / 2 / scale) / TILE); y <= Math.floor((c.y + height / 2 / scale) / TILE); y++) {
+        if (y < 0 || y >= count) continue;
+        const wrapped = ((x % count) + count) % count;
+        tiles.push({
+          key: `${z}/${x}/${y}`,
+          uri: `https://tile.openstreetmap.org/${z}/${wrapped}/${y}.png`,
+          left: width / 2 + (x * TILE - c.x) * scale,
+          top: height / 2 + (y * TILE - c.y) * scale,
+          size: TILE * scale + 0.5, // hairline overlap hides seams between tiles
+        });
+      }
+    const centre = project(view.lat, view.lng, view.zoom);
+    for (const m of matches.filter(located)) {
+      const p = project(m.listing.latitude, m.listing.longitude, view.zoom);
+      let x = p.x - centre.x + width / 2;
+      let y = p.y - centre.y + height / 2;
+      // Homes in one neighborhood share nearly the same point: spiral outwards until the price label is clear
+      // of the ones already placed, so each stays readable and tappable. Zooming in pulls them apart for real.
+      const ax = x;
+      const ay = y;
+      for (let k = 1; k < 40 && pins.some((o) => Math.abs(o.x - x) < 54 && Math.abs(o.y - y) < 26); k++) {
+        x = ax + Math.cos(k * 2.4) * 16 * Math.sqrt(k);
+        y = ay + Math.sin(k * 2.4) * 12 * Math.sqrt(k);
+      }
+      pins.push({ m, x, y });
+    }
+  }
+  const unlocated = matches.length - matches.filter(located).length;
+  const place = matches[0]?.listing.city && matches[0].listing.city !== "Unknown" ? matches[0].listing.city : "your area";
   return (
     <View
-      accessibilityLabel={`Illustrative map of ${matches[0]?.listing.neighborhood || matches[0]?.listing.city || "your area"}`}
+      accessibilityLabel={`Map of homes in ${place}. Drag to move, pinch or use the buttons to zoom.`}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        if (!size || size.width !== width || size.height !== height) setSize({ width, height });
+      }}
       style={[ui.map, expanded && { height: 420 }]}
+      {...pan.panHandlers}
     >
-      <View
-        style={{
-          position: "absolute",
-          backgroundColor: "#BFE5FA",
-          width: "36%",
-          height: "70%",
-          left: "48%",
-          top: -25,
-          borderBottomLeftRadius: 40,
-          transform: [{ rotate: "-13deg" }],
-        }}
-      />
-      {[12, 30, 49, 68, 88].map((x, i) => (
-        <React.Fragment key={x}>
-          <View
+      {tiles.map((t) => (
+        <Image
+          key={t.key}
+          source={{ uri: t.uri }}
+          fadeDuration={0}
+          style={{ position: "absolute", left: t.left, top: t.top, width: t.size, height: t.size }}
+        />
+      ))}
+      {pins.map(({ m, x, y }) => {
+        const active = selectedId === m.listingId;
+        return (
+          <Pressable
+            key={m.listingId}
+            accessibilityRole="button"
+            accessibilityLabel={`Map pin ${money(m.listing.monthlyRent)}, ${m.listing.neighborhood}`}
+            accessibilityState={{ selected: active }}
+            aria-pressed={active}
+            onPress={() => onSelect(m.listingId)}
             style={{
               position: "absolute",
-              width: 5,
-              height: "130%",
-              left: `${x}%`,
-              top: -10,
-              backgroundColor: "#FFF",
-              transform: [{ rotate: "12deg" }],
+              left: x,
+              top: y,
+              zIndex: active ? 2 : 1,
+              transform: [{ translateX: -24 }, { translateY: -26 }],
+              minHeight: 44,
+              minWidth: 48,
+              alignItems: "center",
             }}
-          />
-          <View
-            style={{
-              position: "absolute",
-              height: 5,
-              width: "110%",
-              top: `${x}%`,
-              backgroundColor: "#FFF",
-              transform: [{ rotate: "-8deg" }],
-            }}
-          />
-          {i < 3 && (
+          >
+            <View style={[ui.pin, active && { backgroundColor: colors.blue }]}>
+              <Label
+                style={{
+                  fontSize: 13,
+                  lineHeight: 18,
+                  fontWeight: "700",
+                  color: active ? "#FFF" : colors.text,
+                }}
+              >
+                {money(m.listing.monthlyRent)}
+              </Label>
+            </View>
             <View
               style={{
-                position: "absolute",
-                width: 19,
-                height: 25,
-                backgroundColor: "#D8EBBC",
-                left: `${x + 4}%`,
-                top: `${20 + i * 23}%`,
-                transform: [{ rotate: "12deg" }],
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: active ? colors.blue : colors.text,
+                marginTop: 2,
               }}
             />
-          )}
-        </React.Fragment>
-      ))}
-      <Label
-        style={{
-          position: "absolute",
-          left: "57%",
-          top: 12,
-          fontSize: 13,
-          lineHeight: 15,
-          color: "#4D95C4",
-        }}
-      >
-        Lake{"\n"}Union
+          </Pressable>
+        );
+      })}
+      <Label style={ui.mapCredit}>
+        {ready && !pins.length
+          ? "These posts don't say where the home is · "
+          : `Approximate locations${unlocated ? ` · ${unlocated} without a location` : ""} · `}
+        © OpenStreetMap contributors
       </Label>
-      <Label
-        style={{ position: "absolute", left: 12, bottom: 4, fontSize: 13 }}
-      >
-        {matches[0]?.listing.city && matches[0].listing.city !== "Unknown"
-          ? matches[0].listing.city
-          : ""}
-      </Label>
-      {matches.map((m, i) => (
-        <Pressable
-          key={m.listingId}
-          accessibilityRole="button"
-          accessibilityLabel={`Map pin ${money(m.listing.monthlyRent)}`}
-          accessibilityState={{ selected: selectedId === m.listingId }}
-          aria-pressed={selectedId === m.listingId}
-          onPress={() => onSelect(m.listingId)}
-          style={{
-            position: "absolute",
-            left: `${pins[i % 5].x}%`,
-            top: `${pins[i % 5].y}%`,
-            transform: [{ translateX: -24 }, { translateY: -16 }],
-            minHeight: 44,
-            minWidth: 48,
-            alignItems: "center",
-          }}
-        >
-          <View
-            style={[
-              ui.pin,
-              selectedId === m.listingId && { backgroundColor: colors.blue },
-            ]}
-          >
-            <Label
-              style={{
-                fontSize: 13,
-                lineHeight: 18,
-                fontWeight: "700",
-                color: selectedId === m.listingId ? "#FFF" : colors.text,
-              }}
-            >
-              {money(m.listing.monthlyRent)}
-            </Label>
-          </View>
-          <View
-            style={{
-              width: 4,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor:
-                selectedId === m.listingId ? colors.blue : colors.text,
-              marginTop: 2,
-            }}
-          />
-        </Pressable>
-      ))}
-      {onExpand && (
-        <IconAction
-          style={ui.expandMap}
-          name="expand-outline"
-          label="Expand map"
-          onPress={onExpand}
-        />
-      )}
+      <View style={ui.mapControls}>
+        {onExpand && (
+          <MapButton name="expand-outline" label="Expand map" onPress={onExpand} style={{ marginBottom: 8 }} />
+        )}
+        <MapButton name="add" label="Zoom in" onPress={() => zoomBy(1)} disabled={!view || view.zoom >= MAX_ZOOM} style={ui.mapButtonTop} />
+        <MapButton name="remove" label="Zoom out" onPress={() => zoomBy(-1)} disabled={!view || view.zoom <= MIN_ZOOM} style={ui.mapButtonBottom} />
+        <MapButton name="locate-outline" label="Show all homes" onPress={recenter} style={{ marginTop: 8 }} />
+      </View>
     </View>
+  );
+}
+function MapButton({ name, label, onPress, disabled, style }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [ui.mapButton, style, pressed && { backgroundColor: colors.input }]}
+    >
+      <Icon name={name} size={20} color={disabled ? "#B4B9C0" : colors.text} />
+    </Pressable>
   );
 }
 export const ui = StyleSheet.create({
@@ -562,10 +683,43 @@ export const ui = StyleSheet.create({
     color: colors.secondary,
   },
   map: {
-    height: 150,
+    height: 220,
     borderRadius: 20,
     overflow: "hidden",
     backgroundColor: "#EEF0E7",
+  },
+  mapControls: { position: "absolute", right: 8, top: 8, zIndex: 3 },
+  mapButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  mapButtonTop: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  mapButtonBottom: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.divider,
+  },
+  mapCredit: {
+    position: "absolute",
+    left: 6,
+    bottom: 3,
+    zIndex: 3,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.secondary,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
   },
   pin: {
     backgroundColor: "#FFF",
@@ -577,13 +731,6 @@ export const ui = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  expandMap: {
-    position: "absolute",
-    right: 4,
-    top: 4,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
   },
   input: {
     padding: 16,

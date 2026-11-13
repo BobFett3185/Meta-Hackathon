@@ -21,7 +21,19 @@ export async function loadData() {
   };
 }
 
-const same = (a?: string | null, b?: string | null) => (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+const norm = (s?: string | null) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const same = (a?: string | null, b?: string | null) => norm(a) === norm(b);
+
+/** A "looking for roommates to find a place together" post states a budget, not a home on offer. */
+const offersHome = (l: any) => !(l.category === "roommate_request" && l.leaseType === "Home");
+
+/** Keep only neighborhoods some listing in the goal's city actually uses. An area nobody posts under
+ *  (a saved "downtown", a typo) would otherwise be a filter nothing can pass; the search falls back to the city. */
+function knownNeighborhoods(goal: any, listings: any[]) {
+  const inCity = listings.filter((l) => same(l.city, goal.city));
+  if (!inCity.length) return goal.preferredNeighborhoods ?? [];
+  return (goal.preferredNeighborhoods ?? []).filter((n: string) => inCity.some((l) => same(l.neighborhood, n)));
+}
 
 function roommateMatches(roommates: any[], goal: any) {
   if (goal.intent === "Home") return [];
@@ -64,10 +76,11 @@ async function ensureFresh(ms = 12_000) {
   catch (e) { console.warn("[fresh]", (e as Error).message); }
 }
 
-export async function search(goal: any, query?: string, userId?: string) {
+export async function search(input: any, query?: string, userId?: string) {
   await ensureFresh();
   const d = await loadData();
-  const homes = goal.intent === "Roommate" && goal.alreadyHasHome === false ? [] : matchHomes(d.listings, goal);
+  const goal = { ...input, preferredNeighborhoods: knownNeighborhoods(input, d.listings) };
+  const homes = goal.intent === "Roommate" && goal.alreadyHasHome === false ? [] : matchHomes(d.listings.filter(offersHome), goal);
   // Roommate matching lives in services/roommates; falls back to the simple filter if roommate_profiles is unavailable.
   const roommates = await searchRoommates(goal).catch((e) => { console.warn("[roommates]", (e as Error).message); return roommateMatches(d.roommates, goal); });
   void logQuery({ userId, kind: "search", raw: query ?? goal.rawPrompt ?? "", goal, homes: homes.length, roommates: roommates.length });
