@@ -10,6 +10,7 @@ import {
   ui,
   colors,
   money,
+  dateRange,
 } from "./components";
 import { nestService } from "./service";
 import IntentSetup, { intentCopy } from "./IntentSetup";
@@ -48,7 +49,6 @@ export default function Intake({
         setError("Answer the household question before finding matches.");
       else if (
         !draft.city ||
-        !draft.preferredNeighborhoods.length ||
         draft.budgetAmount <= 0 ||
         draft.maxResults < 1 ||
         draft.maxResults > 20 ||
@@ -57,11 +57,11 @@ export default function Intake({
         draft.startDate > draft.endDate
       )
         setError(
-          "Check your location, dates, positive budget, and result limit (1–20).",
+          "Check your city, dates, positive budget, and result limit (1–20).",
         );
       else await onConfirm(draft);
-    } catch {
-      setError("Could not save your search. Please try again.");
+    } catch (e) {
+      setError(e?.message || "Could not save your search. Please try again.");
     } finally {
       setPending(false);
     }
@@ -173,7 +173,7 @@ export default function Intake({
         <View style={{ marginTop: 12 }}>
           <Label style={{ fontWeight: "700" }}>Must-haves</Label>
           {row(
-            `${draft.city} · ${draft.startDate === "2027-06-01" && draft.endDate === "2027-08-31" ? "Jun–Aug 2027" : `${draft.startDate} – ${draft.endDate}`}`,
+            `${draft.city} · ${dateRange(draft.startDate, draft.endDate)}`,
             "location and dates",
           )}
           {editor === "location and dates" && (

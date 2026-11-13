@@ -27,6 +27,18 @@ export const colors = {
   unknown: "#996000",
 };
 export const money = (value) => `$${value.toLocaleString("en-US")}`;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ym = (d) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(d || "") ? { y: +d.slice(0, 4), m: +d.slice(5, 7) - 1 } : null;
+/** "Jun–Aug 2027", "Dec 2026 – Jan 2027", "From Jun 2027", or "Dates not stated". */
+export const dateRange = (start, end) => {
+  const a = ym(start), b = ym(end);
+  if (!a && !b) return "Dates not stated";
+  if (a && !b) return `From ${MONTHS[a.m]} ${a.y}`;
+  if (!a) return `Until ${MONTHS[b.m]} ${b.y}`;
+  if (a.y !== b.y) return `${MONTHS[a.m]} ${a.y} – ${MONTHS[b.m]} ${b.y}`;
+  return a.m === b.m ? `${MONTHS[a.m]} ${a.y}` : `${MONTHS[a.m]}–${MONTHS[b.m]} ${a.y}`;
+};
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(true);
   useEffect(() => {
@@ -313,7 +325,7 @@ export function MapAdapter({
   ];
   return (
     <View
-      accessibilityLabel="Illustrative map of South Lake Union"
+      accessibilityLabel={`Illustrative map of ${matches[0]?.listing.neighborhood || matches[0]?.listing.city || "your area"}`}
       style={[ui.map, expanded && { height: 420 }]}
     >
       <View
@@ -381,7 +393,9 @@ export function MapAdapter({
       <Label
         style={{ position: "absolute", left: 12, bottom: 4, fontSize: 13 }}
       >
-        Seattle
+        {matches[0]?.listing.city && matches[0].listing.city !== "Unknown"
+          ? matches[0].listing.city
+          : ""}
       </Label>
       {matches.map((m, i) => (
         <Pressable

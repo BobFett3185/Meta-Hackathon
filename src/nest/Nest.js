@@ -40,7 +40,33 @@ import {
 import Intake from "./Intake";
 import { imageSource } from "./assets";
 
-export default function Nest({ onExit }) {
+// Loads the user's setup (groups, cities, default search) from Supabase before showing Nest.
+export default function Nest(props) {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null);
+  const load = useCallback(() => {
+    setError(null);
+    nestService.loadSetup().then(() => setReady(true), (e) => setError(e.message));
+  }, []);
+  useEffect(load, [load]);
+  if (error)
+    return (
+      <View style={{ flex: 1, padding: 24, justifyContent: "center", gap: 16 }}>
+        <Label>{error}</Label>
+        <Button onPress={load}>Try again</Button>
+        <Button onPress={props.onExit}>Back</Button>
+      </View>
+    );
+  if (!ready)
+    return (
+      <View style={{ flex: 1, padding: 24, justifyContent: "center" }}>
+        <Label>Loading your communities…</Label>
+      </View>
+    );
+  return <NestScreen {...props} />;
+}
+
+function NestScreen({ onExit }) {
   const [store, setStore] = useState(null);
   const [tab, setTab] = useState("Homes");
   const [route, setRoute] = useState(null);
@@ -82,7 +108,9 @@ export default function Nest({ onExit }) {
     store?.communityArea ||
     store?.homeArea ||
     goal?.preferredNeighborhoods[0] ||
-    "South Lake Union";
+    setup.areas[0] ||
+    goal?.city ||
+    "";
   const notify = (text, undo) => {
     clearTimeout(noticeTimer.current);
     setNotice({ text, undo });
@@ -167,16 +195,16 @@ export default function Nest({ onExit }) {
     const next =
       example != null
         ? {
-            ...setup.demoGoal,
+            ...setup.defaultGoal,
             intent: example === 1 ? "Roommate" : "Home",
             rawPrompt:
               example === 1
-                ? "I’m moving to Seattle June–August 2027. Find a roommate for my internship with a budget of $1,500 per person."
-                : "I’m moving to Seattle June–August 2027. Find a furnished room under $1,500 per person.",
+                ? `I’m moving to ${setup.defaultGoal.city}. Find a roommate with a budget of $${setup.defaultGoal.budgetAmount} per person.`
+                : `I’m moving to ${setup.defaultGoal.city}. Find a room under $${setup.defaultGoal.budgetAmount} per person.`,
           }
         : draft ||
           goal || {
-            ...setup.demoGoal,
+            ...setup.defaultGoal,
             intent: tab === "Roommates" ? "Roommate" : "Both",
           };
     changeDraft(
@@ -243,7 +271,7 @@ export default function Nest({ onExit }) {
       setMatches([]);
       return;
     }
-    const g = await nestService.saveGoal(setup.demoGoal);
+    const g = await nestService.saveGoal(setup.defaultGoal);
     setStore(await nestService.getState());
     setDraft(g);
     await fetchResults(g);
@@ -307,7 +335,7 @@ export default function Nest({ onExit }) {
   else if (route?.type === "map")
     content = (
       <>
-        <Header title="Around South Lake Union" onBack={() => setRoute(null)} />
+        <Header title={`Around ${area}`} onBack={() => setRoute(null)} />
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <MapAdapter
             matches={matches}
@@ -565,14 +593,23 @@ export default function Nest({ onExit }) {
                 { justifyContent: "space-between", marginTop: 12 },
               ]}
             >
-              <Label>Saturday, June 5, 2027 · 10 AM PDT</Label>
+              <Label>
+                {new Date(sheet.item.startsAt).toLocaleString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </Label>
               <Bookmark
                 saved={store.saved.events.includes(sheet.item.id)}
                 onPress={() => save("events", sheet.item.id)}
               />
             </View>
             <Label style={[ui.secondary, { marginBottom: 12 }]}>
-              {sheet.item.neighborhood} · Seattle Newcomers
+              {sheet.item.neighborhood}
             </Label>
             <Label>{sheet.item.description}</Label>
           </>

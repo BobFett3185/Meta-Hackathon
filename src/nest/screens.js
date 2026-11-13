@@ -22,6 +22,7 @@ import {
   ui,
   colors,
   money,
+  dateRange,
 } from "./components";
 import CircularGallery from "./Gallery";
 
@@ -74,9 +75,7 @@ export function GoalSummary({ goal, onEdit, onSettings, roommate }) {
                 ? " total"
                 : ""}{" "}
             ·{" "}
-            {goal.startDate === "2027-06-01" && goal.endDate === "2027-08-31"
-              ? "Jun–Aug"
-              : `${goal.startDate} – ${goal.endDate}`}
+            {dateRange(goal.startDate, goal.endDate)}
           </Label>
         </View>
         <IconAction
@@ -159,8 +158,8 @@ export function Homes({
         {status === "error" && (
           <View style={{ marginTop: 16 }}>
             <Label style={{ color: colors.unknown }}>
-              Seattle Intern Housing could not be loaded. Your previous results
-              are still available.
+              Housing results could not be loaded. Your previous results are
+              still available.
             </Label>
             <View style={ui.row}>
               <Link onPress={onRetry}>Retry</Link>
@@ -476,7 +475,7 @@ export function HomeDetail({
         </Label>
         <Label style={ui.section}>{listing.title}</Label>
         <Label style={[ui.secondary, { fontSize: 16, marginTop: 2 }]}>
-          {listing.leaseType} · Jun–Aug 2027
+          {listing.leaseType} · {dateRange(listing.availableFrom, listing.availableTo)}
         </Label>
         <View
           style={[ui.row, { alignItems: "flex-start", marginTop: 20, gap: 16 }]}
@@ -575,7 +574,7 @@ export function PersonDetail({
         {person.budgetPerPerson && (
           <>
             <Label style={{ marginTop: 16 }}>
-              {money(person.budgetPerPerson)} per person · Jun–Aug 2027
+              {money(person.budgetPerPerson)} per person · {dateRange(person.dates[0], person.dates[1])}
             </Label>
             <Label style={ui.secondary}>
               {person.preferredAreas.join(", ")}

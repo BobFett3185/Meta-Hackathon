@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { demoGoal, homes } from "./fixtures.js";
 import {
-  interpretPrompt,
   evaluateHome,
   matchHomes,
   demoHomeMatches,
@@ -31,31 +30,11 @@ test("demo shows labeled samples for incompatible filters without changing the g
   assert.equal(samples.length, 2);
   assert.equal(samples[0].criteria[0].status, "not-matched");
 });
-test("interpreting a changed budget preserves untouched preferences and sources", () => {
-  const base = {
-    ...demoGoal,
-    preferences: ["Near Amazon"],
-    sourceIds: ["interns"],
-    cadence: "Weekly",
-  };
-  const { goal, missing } = interpretPrompt(
-    "Seattle June–August 2027, under $1,400 per person",
-    base,
-  );
-  assert.equal(missing, null);
-  assert.equal(goal.budgetAmount, 1400);
-  assert.deepEqual(goal.preferences, base.preferences);
-  assert.deepEqual(goal.sourceIds, base.sourceIds);
-  assert.equal(goal.cadence, "Weekly");
-});
 test("per-person prices are never treated as whole-home rent", () => {
   assert.equal(matchHomes(homes, demoGoal).length, 5);
   assert.equal(
     matchHomes(homes, { ...demoGoal, budgetBasis: "home" }).length,
     0,
-  );
-  assert.ok(
-    interpretPrompt("Seattle June–August 2027 under $1500", demoGoal).missing,
   );
 });
 test("gallery and map resolve a common listing ID, including stale selections", () => {
@@ -96,24 +75,21 @@ test("no results preserves budget, dates, and source constraints", () => {
   );
   assert.equal(demoGoal.budgetAmount, 1500);
 });
-test("unsupported prompts keep their original input and request clarification", () => {
-  const input = "Find a place in Toronto";
-  const result = interpretPrompt(input, demoGoal);
-  assert.equal(result.goal.rawPrompt, input);
-  assert.ok(result.missing);
-});
-test("explicit neighborhoods replace the default instead of silently matching another area", () => {
-  const result = interpretPrompt(
-    "Seattle Capitol Hill June–August 2027 under $1500 per person",
-    demoGoal,
+test("a goal for another city never matches listings from a different city", () => {
+  assert.deepEqual(matchHomes(homes, { ...demoGoal, city: "Toronto" }), []);
+  assert.deepEqual(
+    matchHomes(homes, { ...demoGoal, city: "Toronto", preferredNeighborhoods: [] }),
+    [],
   );
-  assert.deepEqual(result.goal.preferredNeighborhoods, ["Capitol Hill"]);
-  assert.deepEqual(matchHomes(homes, result.goal), []);
-  assert.ok(
-    interpretPrompt(
-      "Seattle Ballard June–August 2027 under $1500 per person",
-      demoGoal,
-    ).missing,
+});
+test("city comparison ignores case and a city-only goal matches the whole city", () => {
+  const cityOnly = { ...demoGoal, city: "seattle", preferredNeighborhoods: [] };
+  assert.equal(matchHomes(homes, cityOnly).length, 5);
+});
+test("a named neighborhood still restricts matches within the city", () => {
+  assert.deepEqual(
+    matchHomes(homes, { ...demoGoal, preferredNeighborhoods: ["Capitol Hill"] }),
+    [],
   );
 });
 test('home type and intent affect listing results without changing the draft', () => {

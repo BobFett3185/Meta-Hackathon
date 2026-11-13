@@ -1,78 +1,4 @@
-/** Limited fixture interpreter: only explicit, supported Seattle summer searches. */
-export function interpretPrompt(rawPrompt, base) {
-  const text = rawPrompt.toLowerCase();
-  if (!text.trim())
-    return {
-      goal: { ...base, rawPrompt },
-      missing: "Tell Nest where you are moving, your dates, and your budget.",
-    };
-  if (!/seattle/.test(text))
-    return {
-      goal: { ...base, rawPrompt },
-      missing:
-        "This demo supports Seattle. Include Seattle in your goal to search these fixtures.",
-    };
-  const amount = text.match(
-    /\$\s*([\d,]+)|(?:under|budget(?: of)?|up to)\s*([\d,]+)/,
-  );
-  if (!amount)
-    return {
-      goal: { ...base, rawPrompt },
-      missing: "Include your budget, for example $1,500 per person.",
-    };
-  if (!/(per person|each|total|whole home)/.test(text))
-    return {
-      goal: { ...base, rawPrompt },
-      missing:
-        "Is that budget per person or for the whole home? Add it to your goal.",
-    };
-  if (!/jun/.test(text) || !/aug/.test(text) || !/2027/.test(text))
-    return {
-      goal: { ...base, rawPrompt },
-      missing:
-        "This demo supports June–August 2027. Include those dates to continue.",
-    };
-  const namedAreas = [
-    ["capitol hill", "Capitol Hill"],
-    ["south lake union", "South Lake Union"],
-    ["slu", "South Lake Union"],
-  ]
-    .filter(([name]) => new RegExp(`\\b${name}\\b`).test(text))
-    .map(([, name]) => name);
-  if (
-    /ballard|fremont|belltown|queen anne|university district|west seattle/.test(
-      text,
-    )
-  )
-    return {
-      goal: { ...base, rawPrompt },
-      missing:
-        "This demo supports South Lake Union and Capitol Hill. Edit the neighborhood in your goal to continue.",
-    };
-  return {
-    goal: {
-      ...base,
-      rawPrompt,
-      city: "Seattle",
-      preferredNeighborhoods: namedAreas.length
-        ? [...new Set(namedAreas)]
-        : base.preferredNeighborhoods,
-      startDate: "2027-06-01",
-      endDate: "2027-08-31",
-      budgetAmount: Number((amount[1] || amount[2]).replaceAll(",", "")),
-      budgetBasis: /total|whole home/.test(text) ? "home" : "person",
-      furnishedRequirement: /unfurnished|not furnished/.test(text)
-        ? false
-        : /furnished/.test(text)
-          ? true
-          : base.furnishedRequirement,
-      preferences: /quiet/.test(text)
-        ? [...new Set([...base.preferences, "Quiet home"])]
-        : base.preferences,
-    },
-    missing: null,
-  };
-}
+const same = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
 export function evaluateHome(listing, goal) {
   const criterion = (criterionId, label, matched, evidence) => ({
     criterionId,
@@ -98,10 +24,15 @@ export function evaluateHome(listing, goal) {
     ),
     criterion(
       "area",
-      "In your preferred neighborhood",
-      goal.city === "Seattle" &&
-        goal.preferredNeighborhoods.includes(listing.neighborhood),
-      listing.neighborhood,
+      goal.preferredNeighborhoods.length
+        ? "In your preferred neighborhood"
+        : "In your city",
+      same(goal.city, listing.city) &&
+        (!goal.preferredNeighborhoods.length ||
+          goal.preferredNeighborhoods.some((n) => same(n, listing.neighborhood))),
+      [listing.neighborhood, listing.city]
+        .filter((x) => x && x !== "Unknown")
+        .join(", ") || "Location not stated",
     ),
     criterion(
       "furnished",
@@ -130,12 +61,13 @@ export function matchHomes(homes, goal) {
   return homes
     .filter((h) => goal.sourceIds.includes(h.sourceId))
     .filter(
+      // Only the two explicit choices narrow the search; "either", "any" or anything else shows all.
       (h) =>
-        !goal.housingType ||
-        goal.housingType === "either" ||
-        (goal.housingType === "room"
+        goal.housingType === "room"
           ? /room/i.test(h.leaseType)
-          : !/room/i.test(h.leaseType)),
+          : goal.housingType === "entire-home"
+            ? !/room/i.test(h.leaseType)
+            : true,
     )
     .map((listing) => ({
       listing,
