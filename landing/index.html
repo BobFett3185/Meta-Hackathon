@@ -67,8 +67,9 @@
   .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  @media (max-width: 860px) { .g3, .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } section { padding: 64px 0; } }
-  @media (max-width: 620px) { .g2, .g3, .g4 { grid-template-columns: minmax(0, 1fr); } }
+  .g5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 860px) { .g3, .g4, .g5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } section { padding: 64px 0; } }
+  @media (max-width: 620px) { .g2, .g3, .g4, .g5 { grid-template-columns: minmax(0, 1fr); } }
 
   /* nav */
   nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
@@ -152,6 +153,24 @@
   .stat .num { font-size: clamp(64px, 9vw, 104px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
   .stat .num span { font-size: .5em; letter-spacing: -0.02em; margin-left: 2px; }
   .stat p { margin-top: 12px; font-size: 18px; max-width: 30ch; }
+  .stat p.small { font-size: 13px; color: var(--ink-3); }
+  .stat.sm .num { font-size: clamp(52px, 6.4vw, 76px); }
+  .stat.sm .num span { font-size: .32em; letter-spacing: 0; color: var(--ink-3); font-weight: 700; }
+  .stat.sm p { font-size: 16px; }
+  .stat.sm p.after { margin-top: 16px; font-size: 15px; font-weight: 800; color: var(--blue); background: var(--blue-soft); border-radius: 10px; padding: 8px 12px; display: inline-block; }
+  .pie { display: flex; align-items: center; gap: 0; margin-top: 24px; }
+  .pie svg { width: 58%; max-width: 300px; height: auto; flex: none; }
+  .pie .slice { transition: stroke-dasharray 1.2s cubic-bezier(.2,.7,.2,1); }
+  .pie .callout { font-size: 16px; line-height: 1.4; color: var(--ink-2); padding-left: 12px; }
+  .pie .callout b { display: block; font-size: clamp(34px, 4vw, 46px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--blue); margin-bottom: 6px; }
+  .cities { display: grid; gap: 12px; margin-top: 30px; }
+  .crow { display: grid; grid-template-columns: 112px 1fr 50px; gap: 12px; align-items: center; font-size: 15px; }
+  .crow .cname { color: var(--ink-2); }
+  .crow .meter { margin: 0; height: 16px; border-radius: 0 6px 6px 0; }
+  .crow .meter i { border-radius: 0 6px 6px 0; }
+  .crow .meter i.dim { background: var(--peri); }
+  .crow .cval { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .crow:first-child .cname { color: var(--ink); font-weight: 700; }
   .meter { height: 12px; border-radius: 6px; background: var(--track); margin-top: 22px; overflow: hidden; }
   .meter i { display: block; height: 100%; border-radius: 6px; background: var(--blue); width: 0; transition: width 1.1s cubic-bezier(.2,.7,.2,1); }
   .meter-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 6px; }
@@ -232,6 +251,19 @@
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
   .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
   .sw.gray, .pbar.gray { background: var(--ink-3); }
+  .sw.peri { background: var(--peri); }
+  .sw.track { background: var(--track); outline: 1px solid var(--line); }
+  .bignum { font-size: clamp(64px, 9vw, 104px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-top: 6px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .bignum small { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink-2); }
+  .bignum.blue { color: var(--blue); }
+  .split { display: flex; gap: 3px; margin-top: 18px; height: 54px; }
+  .split .seg { display: flex; align-items: center; gap: 6px; padding: 0 14px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; min-width: 34px; }
+  .split .seg b { font-size: 20px; font-weight: 800; }
+  .split .seg:first-child { border-radius: 12px 4px 4px 12px; }
+  .split .seg:last-child { border-radius: 4px 12px 12px 4px; }
+  .split .fit { background: var(--blue); color: #fff; }
+  .split .part { background: var(--peri); color: #16181C; justify-content: center; padding: 0; border-radius: 4px; }
+  .split .out { background: var(--track); color: var(--ink-2); }
   .sw.blue, .pbar.blue { background: var(--blue); }
   .pairs { margin-top: 22px; display: grid; gap: 22px; }
   .pair .ptitle { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
@@ -288,8 +320,8 @@
       <a href="#problem">Problem</a>
       <a href="#category">Why now</a>
       <a href="#product">Product</a>
-      <a href="#muse">Muse</a>
       <a href="#numbers">Numbers</a>
+      <a href="#muse">Why Muse</a>
       <a href="#build">How we built it</a>
     </div>
   </div>
@@ -303,12 +335,7 @@
       <p class="lede">Moving to a new city means reading hundreds of Facebook Group posts. Nest reads them for you. Say what you need in one sentence and get a home, a roommate, and a community.</p>
       <div class="ask" aria-label="Example request">
         <div class="label">You tell Nest</div>
-        <div class="text">I'm moving to Seattle for my Amazon internship, June to August 2027. Looking for a room near South Lake Union under $1,500 per person and a roommate to share with.</div>
-        <div class="chips">
-          <span class="chip">5 homes that fit</span>
-          <span class="chip">2 roommate matches</span>
-          <span class="chip peri">Every match explained</span>
-        </div>
+        <div class="text">I'm moving to Seattle for my internship, June to August 2027. Looking for a room near South Lake Union under $1,500 per person and a roommate to share with.</div>
       </div>
     </div>
     <div class="fan">
@@ -327,19 +354,33 @@
     <p class="lede">Young adults move for school, internships, and first jobs, and they already look for housing on social media. But the leads live in informal posts scattered across Groups.</p>
     <div class="grid g2" style="margin-top:44px">
       <div class="card stat">
-        <div class="num" data-count="27">0<span>%</span></div>
-        <p>of renters aged 18 to 24 use social media in their rental search.</p>
-        <div class="meter" role="img" aria-label="27 out of 100"><i data-w="27"></i></div>
-        <div class="meter-scale"><span>0</span><span>100%</span></div>
+        <div class="num" data-count="6.8" data-dec="1">0<span>M</span></div>
+        <p>U.S. households share a home with people they are not related to. A record high.</p>
+        <div class="pie">
+          <svg viewBox="0 0 300 230" role="img" aria-label="Pie chart: 2.8 million of 6.8 million house-sharing households are headed by adults aged 18 to 34">
+            <circle cx="115" cy="115" r="110" fill="var(--track)"/>
+            <circle class="slice" cx="115" cy="115" r="55" fill="none" stroke="var(--blue)" stroke-width="110" stroke-dasharray="0 345.6" data-dash="142.3" transform="rotate(-90 115 115)"/>
+            <polyline points="187,94 240,115 300,115" fill="none" stroke="var(--ink)" stroke-width="2"/>
+            <circle cx="187" cy="94" r="5" fill="#fff" stroke="var(--ink)" stroke-width="2"/>
+          </svg>
+          <div class="callout"><b>2.8M</b>are shared by young adults, aged 18 to 34. That is 4 in 10.</div>
+        </div>
+        <p class="small" style="margin-top:16px;max-width:none">NAHB analysis of 2023 census data. 1.2M households headed by someone aged 18 to 24, 1.6M by someone aged 25 to 34.</p>
       </div>
       <div class="card stat">
-        <div class="num" data-count="81">0<span>%</span></div>
-        <p>say price is a top factor in choosing a place.</p>
-        <div class="meter" role="img" aria-label="81 out of 100"><i data-w="81"></i></div>
-        <div class="meter-scale"><span>0</span><span>100%</span></div>
+        <div class="num" data-count="2.7" data-dec="1">0<span>M</span></div>
+        <p>members across New York City's Facebook roommate groups alone.</p>
+        <div class="cities">
+          <div class="crow"><span class="cname">New York</span><div class="meter"><i data-w="100.0"></i></div><span class="cval">2.7M</span></div>
+          <div class="crow"><span class="cname">Los Angeles</span><div class="meter"><i data-w="26.4" class="dim"></i></div><span class="cval">0.7M</span></div>
+          <div class="crow"><span class="cname">San Francisco</span><div class="meter"><i data-w="24.9" class="dim"></i></div><span class="cval">0.7M</span></div>
+          <div class="crow"><span class="cname">Chicago</span><div class="meter"><i data-w="22.8" class="dim"></i></div><span class="cval">0.6M</span></div>
+          <div class="crow"><span class="cname">Austin</span><div class="meter"><i data-w="22.2" class="dim"></i></div><span class="cval">0.6M</span></div>
+          <div class="crow"><span class="cname">Seattle</span><div class="meter"><i data-w="12.9" class="dim"></i></div><span class="cval">0.35M</span></div>
+        </div>
+        <p class="small" style="margin-top:16px;max-width:none">Members of Facebook groups with "roommates" in the name: the top five U.S. cities, plus Seattle (15th). One person in several groups is counted more than once. Coventry Direct, 2025.</p>
       </div>
     </div>
-    <p class="small" style="margin-top:14px">Source: Apartments.com survey of nearly 5,000 young renters.</p>
     <div class="card" style="margin-top:20px">
       <h3>What a housing lead actually looks like</h3>
       <p class="post" style="margin-top:14px">1.8k, SLU, Jun-Aug, DM me</p>
@@ -392,23 +433,23 @@
     <p class="lede">Nest lives inside Facebook and works from the Groups you already belong to.</p>
     <div class="demo">
       <button class="phone" id="phone" type="button" aria-label="Play or pause the app demo">
-        <video id="demo" src="assets/demo.mp4" poster="assets/s3.jpg" muted playsinline preload="auto"></video>
+        <video id="demo" src="assets/demo.mp4?v=2" poster="assets/s8.jpg" muted playsinline preload="auto"></video>
         <span class="play" aria-hidden="true"><i></i></span>
       </button>
       <div class="chapters">
-        <button class="chapter" type="button" data-start="12" data-end="47.5">
+        <button class="chapter" type="button" data-start="3.5" data-end="42">
           <div class="n">1</div>
           <div><h3>A place to live</h3>
           <p>Group posts become standard listings with rent, dates, and neighborhood, shown on a real map and filtered to your budget and stay.</p></div>
           <span class="go">&#9654; Play</span><i class="prog"></i>
         </button>
-        <button class="chapter" type="button" data-start="47.5" data-end="67">
+        <button class="chapter" type="button" data-start="42" data-end="61.5">
           <div class="n">2</div>
           <div><h3>People to live with</h3>
           <p>See who is looking in the same place, for the same dates, on a similar budget, and what you share before you ever message them.</p></div>
           <span class="go">&#9654; Play</span><i class="prog"></i>
         </button>
-        <button class="chapter" type="button" data-start="67" data-end="90">
+        <button class="chapter" type="button" data-start="61.5" data-end="84.5">
           <div class="n">3</div>
           <div><h3>A reason to go out</h3>
           <p>Once you land, Nest shows what is happening near your new place and who has opted in to meeting.</p></div>
@@ -433,7 +474,31 @@
   </div>
 </section>
 
-<section id="muse" class="alt">
+<section id="numbers" class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Our demo, in numbers</p>
+    <h2>From a pile of posts to the homes that fit.</h2>
+    <div class="flow">
+      <div class="step"><div class="big" data-count="12">0</div><p>mock Facebook Groups read by Muse</p></div>
+      <div class="step"><div class="big" data-count="210">0</div><p>structured housing listings extracted</p></div>
+      <div class="step"><div class="big" data-count="55">0</div><p>roommate profiles extracted</p></div>
+      <div class="step key"><div class="big" data-count="1">0</div><p>sentence to search all of it</p></div>
+    </div>
+
+    <div class="card chart">
+      <h3>South Lake Union has the most homes on offer in our Seattle demo data</h3>
+      <p class="small" style="margin-top:6px">Homes on offer by neighborhood, extracted by Muse from Group posts</p>
+      <div class="bars" id="bars"></div>
+      <details>
+        <summary>View as table</summary>
+        <table id="table"><thead><tr><th>Neighborhood</th><th>Homes on offer</th><th>Median room rent</th></tr></thead><tbody></tbody></table>
+      </details>
+      <p class="small" style="margin-top:14px">104 Seattle homes on offer. Median room rent is the per-person monthly price. Demo data from mock Groups; snapshot from November 13, 2026.</p>
+    </div>
+  </div>
+</section>
+
+<section id="muse">
   <div class="wrap">
     <p class="eyebrow">How Muse powers it</p>
     <h2>Muse is the layer between the posts and the person.</h2>
@@ -472,18 +537,9 @@
     </div>
     <div class="result-bar"><b>Rule-based matcher</b> compares the two in plain, unit-tested code and returns results with a verdict per criterion: matched, not matched, or unknown.</div>
 
-    <h3 class="sub">Remove Muse, and what is left to filter on?</h3>
-    <p class="muted" style="max-width:62ch;margin-top:8px">A filter needs fields. We measured our 209 demo listings to see what a plain search would have to work with.</p>
-    <div class="card" style="margin-top:20px">
-      <div class="legend"><span><i class="sw gray"></i>Stated in the raw post, usable by a filter</span><span><i class="sw blue"></i>Available after Muse</span></div>
-      <div class="pairs" id="pairs"></div>
-      <details>
-        <summary>View as table</summary>
-        <table id="pairs-table"><thead><tr><th>Field</th><th>Raw post</th><th>After Muse</th></tr></thead><tbody></tbody></table>
-      </details>
-      <p class="small" style="margin-top:14px">Out of 209 listings extracted from mock Group posts; snapshot from November 12, 2026. A raw post counts as giving its city when the city name appears in the post text.</p>
-    </div>
 
+    <h3 class="sub">One real post, read two ways</h3>
+    <p class="muted" style="max-width:66ch;margin-top:8px">This is what a housing lead looks like in a Group, and what each approach can do with it.</p>
     <div class="versus">
       <div class="card">
         <span class="tag warn">Keyword filter</span>
@@ -514,6 +570,60 @@
       </div>
     </div>
 
+    <h3 class="sub">"But Facebook already has filters." We tested them.</h3>
+    <p class="muted" style="max-width:66ch;margin-top:8px">Marketplace lets you filter by location and maximum price. So we gave filters a head start, with perfect prices and locations, and tried a common case: two friends, South Lake Union, June 1 to August 31, with $3,000 a month between them.</p>
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card">
+        <span class="tag warn">Filter · max $3,000</span>
+        <div class="bignum">34<small>results</small></div>
+        <ul class="checks">
+          <li class="no"><b>9 are wrong.</b> That is 1 in 4.</li>
+          <li class="no"><b>7 miss the dates.</b> There is no filter for "my stay".</li>
+          <li class="no"><b>5 are per-person prices</b> that cost over $3,000 for two.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag warn">Filter · max $1,500 each</span>
+        <div class="bignum">23<small>results</small></div>
+        <ul class="checks">
+          <li class="no"><b>4 homes that fit are hidden.</b> Whole apartments at $2,196 to $2,832 look "too expensive".</li>
+          <li class="no"><b>2 still miss the dates.</b></li>
+        </ul>
+      </div>
+      <div class="card nestcard">
+        <span class="tag blue">Nest · with Muse</span>
+        <div class="bignum blue">25<small>homes that fit</small></div>
+        <ul class="checks">
+          <li class="yes"><b>21 rooms and 4 whole apartments,</b> each compared on what two people would actually pay.</li>
+          <li class="yes"><b>All cover the full stay.</b> 3 more are shown, labelled as part of the stay.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="muted" style="max-width:70ch;margin-top:18px;font-size:16px">A filter compares one number to one number. It does not know if $2,400 is for a room or the whole apartment, or whether "July 1" covers your summer. With filters you pick which mistake to make. Muse reads what the price and dates mean, so Nest does not have to pick.</p>
+
+    <h3 class="sub">Roommates are where a filter gives up</h3>
+    <p class="muted" style="max-width:66ch;margin-top:8px">A home has a price and a date. A person has habits, and people describe habits in their own words. We ran one request (South Lake Union, June 1 to August 31, up to $1,500 per person) against every roommate post.</p>
+    <div class="versus">
+      <div class="card">
+        <span class="tag warn">Without Muse</span>
+        <div class="bignum">55<small>introductions to read</small></div>
+        <p class="muted" style="font-size:16px;margin-top:10px">Each one is a paragraph. Budget, dates, area, sleep, pets, and cleanliness are all in there somewhere, in a different order every time.</p>
+      </div>
+      <div class="card nestcard">
+        <span class="tag blue">With Muse · Nest</span>
+        <div class="bignum blue">2<small>people with no conflicts</small></div>
+        <p class="muted" style="font-size:16px;margin-top:10px">Same neighborhood, overlapping dates, budget within 15%. The other 53 each have at least one conflict, and Nest says which.</p>
+      </div>
+    </div>
+    <div class="grid g3 jobs" style="margin-top:20px">
+      <div class="card"><div class="k">Search "pet"</div><h3>Finds 43 posts. None of them has a pet.</h3><p>The 11 people who do have one wrote "one cat". Muse reads it as intended: 11 have a pet, 31 are open to pets, 12 prefer none.</p></div>
+      <div class="card"><div class="k">Search "clean"</div><h3>Finds 37 posts. Two kinds of people.</h3><p>19 are tidy. The other 18 wrote "relaxed but clean common areas". Muse files each as tidy or relaxed, so the two never get mixed up.</p></div>
+      <div class="card guard"><div class="k">Smoking</div><h3>54 of 55 never said.</h3><p>A filter has nothing to go on. Nest marks it unknown and shows that it is unknown, because Muse is told never to guess.</p></div>
+    </div>
+    <p class="quote">A filter matches <em>words</em>. Nest matches what people <em>mean</em>.</p>
+
+    <p class="small" style="margin-top:14px;max-width:86ch">How we ran it: 210 listings and 55 roommate profiles that Muse extracted from our mock Group posts, scored by the rule-based matcher that ships in the app. The filter test applies location and maximum price to each listing's advertised price, using Muse's own extracted numbers, so the filters get cleaner data than they would really have. Keyword counts are plain text searches of the original posts. Snapshot from November 13, 2026.</p>
+
     <h3 class="sub">Seven jobs Muse does in Nest</h3>
     <div class="grid g4 jobs" style="margin-top:20px">
       <div class="card"><div class="k">01</div><h3>Classify every post</h3><p>Into 10 categories, from housing listing and lease takeover to roommate request, furniture, and events, so each post is routed to the right extractor.</p></div>
@@ -528,81 +638,35 @@
   </div>
 </section>
 
-<section id="numbers">
-  <div class="wrap">
-    <p class="eyebrow">Our demo, in numbers</p>
-    <h2>From a pile of posts to five homes that fit.</h2>
-    <div class="flow">
-      <div class="step"><div class="big" data-count="12">0</div><p>mock Facebook Groups read by Muse</p></div>
-      <div class="step"><div class="big" data-count="209">0</div><p>structured housing listings extracted</p></div>
-      <div class="step"><div class="big" data-count="61">0</div><p>roommate profiles extracted</p></div>
-      <div class="step key"><div class="big" data-count="1">0</div><p>sentence to search all of it</p></div>
-    </div>
-
-    <div class="card chart">
-      <h3>South Lake Union has the most homes on offer in our Seattle demo data</h3>
-      <p class="small" style="margin-top:6px">Homes on offer by neighborhood, extracted by Muse from Group posts</p>
-      <div class="bars" id="bars"></div>
-      <details>
-        <summary>View as table</summary>
-        <table id="table"><thead><tr><th>Neighborhood</th><th>Homes on offer</th><th>Median room rent</th></tr></thead><tbody></tbody></table>
-      </details>
-      <p class="small" style="margin-top:14px">105 Seattle homes on offer. Median room rent is the per-person monthly price. Demo data from mock Groups; snapshot from November 12, 2026.</p>
-    </div>
-  </div>
-</section>
-
 <section id="build" class="alt">
   <div class="wrap">
     <p class="eyebrow">How we built it</p>
     <h2>Five features, built in parallel, joined by one pipeline.</h2>
-    <p class="lede">We built Nest for people our age with little money, little time, and even less attention. Each of us owned one feature on its own branch, and every feature reads from or writes to the same ingestion pipeline.</p>
+    <p class="lede">Each of us owned one feature. Every feature reads from or writes to the same ingestion pipeline.</p>
 
-    <ol class="steps">
-      <li>
-        <div class="k">01</div>
-        <div><h3>Mock Facebook and the data layer</h3>
-        <p>An Expo and React Native Facebook shell backed by Supabase Postgres: groups, members, posts, images, and comments, with a seed script that fills them with realistic, messy posts. Nest reads only groups the user belongs to. No scraping.</p></div>
-      </li>
-      <li>
-        <div class="k">02</div>
-        <div><h3>Muse service and ingestion</h3>
-        <p>One AI service interface with two adapters, Muse and a mock. Each post is analyzed once and tracked, so reruns cost nothing. Ingestion is triggered three ways: a realtime database subscription on new posts, a five-minute timer as a safety net, and a bounded freshness check before each search. Output is validated, then checked for duplicates by key and by text similarity.</p></div>
-      </li>
-      <li>
-        <div class="k">03</div>
-        <div><h3>Housing search and map</h3>
-        <p>A TypeScript API interprets the sentence with Muse, then a rule-based matcher scores budget, dates, area, and furnishing. The matcher is one module shared by server and app, covered by unit tests built from real failed searches. Homes that cover only part of a stay are shown and labelled as partial. The map is drawn from raw tiles with pan and pinch-zoom, so it runs in Expo Go and on web with no native SDK.</p></div>
-      </li>
-      <li>
-        <div class="k">04</div>
-        <div><h3>Roommate matching</h3>
-        <p>A background worker turns roommate posts into profiles, single-flight so runs never overlap, and each post is judged once. Compatibility is computed in code as matched, conflict, or unknown per criterion, with budgets within 15% counted as workable. Results are ranked by conflicts, not by an opaque score, and shown as a swipe deck.</p></div>
-      </li>
-      <li>
-        <div class="k">05</div>
-        <div><h3>Community</h3>
-        <p>Event and activity posts are parsed by a deterministic adapter, filtered to the user's city and stay dates, de-duplicated across groups, and ranked by neighborhood and interests. We chose plain parsing here: the format was regular enough that a model would add latency without adding accuracy.</p></div>
-      </li>
-    </ol>
+    <div class="grid g5 jobs" style="margin-top:44px">
+      <div class="card"><div class="k">01</div><h3>Mock Facebook</h3><p>Groups, posts, and comments in Supabase. No scraping.</p></div>
+      <div class="card"><div class="k">02</div><h3>Muse ingestion</h3><p>Each post read once, validated, and de-duplicated.</p></div>
+      <div class="card"><div class="k">03</div><h3>Housing search</h3><p>Muse reads the sentence. Tested code does the matching.</p></div>
+      <div class="card"><div class="k">04</div><h3>Roommates</h3><p>Ranked by conflicts, not by an opaque score.</p></div>
+      <div class="card"><div class="k">05</div><h3>Community</h3><p>Events near you, during your stay.</p></div>
+    </div>
 
-    <div class="grid g2 build" style="margin-top:36px">
+    <div class="grid g2 build" style="margin-top:20px">
       <div class="card">
         <span class="tag blue">Where AI helped most</span>
         <h3>Executing a plan we had already made</h3>
         <ul>
-          <li>Scaffolding screens, schemas, and the ingestion and matching code from a written brief shared by every teammate and every coding agent.</li>
-          <li>Writing tests, then turning each real failure into a new test.</li>
-          <li>Debugging with evidence: we log every query and what Muse understood, so an agent could replay a failed search against the live server and find the cause.</li>
+          <li>Building screens and pipeline code from one shared brief.</li>
+          <li>Turning every real failure into a test.</li>
         </ul>
       </div>
       <div class="card">
-        <span class="tag warn">Where it fell short, and what we changed</span>
-        <h3>Guessing, latency, and rigid logic</h3>
+        <span class="tag warn">Where it fell short</span>
+        <h3>Guessing and latency</h3>
         <ul>
-          <li>Muse guessed a home type and invented a "downtown" neighborhood, returning zero results. We moved to fixed enums and validate neighborhoods against the database.</li>
-          <li>Muse-written roommate explanations added about 8 seconds per search. We moved explanations into code and made the model optional.</li>
-          <li>AI-written matching was all-or-nothing. We rewrote it around what a person would actually pay, and cut interactive retries from six to two.</li>
+          <li>Muse invented a neighborhood. We now validate against the database.</li>
+          <li>Muse-written explanations added 8 seconds. We moved them into code.</li>
         </ul>
       </div>
     </div>
@@ -619,7 +683,7 @@
 
 <footer>
   <div class="wrap">
-    <p>Sources: <a href="https://www.apartments.com/grow/learning-center/young-renters-survey">Apartments.com young renters survey</a> · <a href="https://about.fb.com/news/2024/09/navigating-your-20s-with-facebook/">Meta, Navigating your 20s with Facebook</a>.</p>
+    <p>Sources: <a href="https://eyeonhousing.org/2025/04/house-sharing-is-not-just-for-young-adults/">NAHB, House Sharing is Not Just for Young Adults</a> · <a href="https://www.coventrydirect.com/?p=2899">Coventry Direct, The Best U.S. Cities for Finding a Roommate</a> · <a href="https://about.fb.com/news/2024/09/navigating-your-20s-with-facebook/">Meta, Navigating your 20s with Facebook</a>.</p>
     <p>Nest is a hackathon project built in response to the prompt "Make Facebook valuable for young adults." It is not an official Meta or Facebook product. The demo uses simulated Facebook Groups and seeded posts; no real Facebook content is scraped.</p>
   </div>
 </footer>
@@ -674,16 +738,16 @@
   }
 </script>
 <script>
-  // Seattle homes on offer in the demo data, by neighborhood (snapshot 2026-11-12).
+  // Seattle homes on offer in the demo data, by neighborhood (snapshot 2026-11-13).
   const hoods = [
-    ["South Lake Union", 30, 1352],
-    ["Belltown", 13, 1450],
-    ["Queen Anne", 13, 1350],
+    ["South Lake Union", 30, 1338],
+    ["Queen Anne", 13, 1335],
+    ["Belltown", 12, 1450],
     ["Fremont", 12, 1550],
     ["Capitol Hill", 11, 1425],
-    ["Ballard", 9, 1475],
+    ["Ballard", 9, 1288],
     ["University District", 9, 1297],
-    ["Beacon Hill", 8, 1767],
+    ["Beacon Hill", 8, 1491],
   ];
   const max = Math.max(...hoods.map((h) => h[1]));
   const money = (n) => "$" + n.toLocaleString("en-US");
@@ -712,48 +776,18 @@
   }
 
 
-  // What a filter can use in the raw posts vs after Muse, out of 209 demo listings (snapshot 2026-11-12).
-  const TOTAL = 209;
-  const pairData = [
-    ["A move-in date in a format a filter can compare", 0, 206],
-    ["The city the home is in", 41, 209],
-    ["A note of what the post left out", 0, 209],
-  ];
-  const pairs = document.getElementById("pairs");
-  const pbody = document.querySelector("#pairs-table tbody");
-  for (const [title, raw, after] of pairData) {
-    const el = document.createElement("div");
-    el.className = "pair";
-    const line = (cls, n, label) => `<div class="pline" tabindex="0" data-tip="<b>${title}</b>${label}: ${n} of ${TOTAL} (${Math.round((n / TOTAL) * 100)}%)"><div class="ptrack"><div class="pbar ${cls}" data-w="${(n / TOTAL) * 100}"></div></div><span class="pval">${n} of ${TOTAL}</span></div>`;
-    el.innerHTML = `<div class="ptitle">${title}</div>` + line("gray", raw, "Raw post") + line("blue", after, "After Muse");
-    pairs.appendChild(el);
-    pbody.insertAdjacentHTML("beforeend", `<tr><td>${title}</td><td>${raw}</td><td>${after}</td></tr>`);
-  }
-  for (const el of document.querySelectorAll(".pline")) {
-    const show = (x, y) => {
-      tip.innerHTML = el.dataset.tip;
-      tip.style.opacity = 1;
-      const w = tip.offsetWidth, h = tip.offsetHeight;
-      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 14)) + "px";
-      tip.style.top = Math.max(8, y - h - 12) + "px";
-    };
-    el.addEventListener("mousemove", (e) => show(e.clientX, e.clientY));
-    el.addEventListener("focus", () => { const r = el.getBoundingClientRect(); show(r.left + 40, r.top); });
-    el.addEventListener("mouseleave", () => (tip.style.opacity = 0));
-    el.addEventListener("blur", () => (tip.style.opacity = 0));
-  }
-
   // Count up numbers and grow bars when they scroll into view.
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const run = (el) => {
     if (el.dataset.w) { el.style.width = el.dataset.w + "%"; return; }
-    const target = Number(el.dataset.count), suffix = el.querySelector("span");
-    const set = (v) => { el.firstChild.nodeValue = String(v); };
+    if (el.dataset.dash) { el.setAttribute("stroke-dasharray", el.dataset.dash + " 345.6"); return; }
+    const target = Number(el.dataset.count), dec = Number(el.dataset.dec || 0);
+    const set = (v) => { el.firstChild.nodeValue = Number(v).toFixed(dec); };
     if (reduced) return set(target);
     const start = performance.now(), dur = 900;
     const step = (now) => {
       const p = Math.min(1, (now - start) / dur);
-      set(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      set(target * (1 - Math.pow(1 - p, 3)));
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -761,7 +795,7 @@
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) if (e.isIntersecting) { run(e.target); io.unobserve(e.target); }
   }, { threshold: 0.4 });
-  document.querySelectorAll("[data-count], [data-w]").forEach((el) => io.observe(el));
+  document.querySelectorAll("[data-count], [data-w], [data-dash]").forEach((el) => io.observe(el));
 </script>
 </body>
 </html>
