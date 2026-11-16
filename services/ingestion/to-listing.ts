@@ -2,6 +2,7 @@ import type { IngestedPost, IngestPost } from "./ingest";
 
 /** Matches src/nest/types.d.ts HomeListing (kept structural so the Expo client can consume it as-is). */
 export interface HomeListingDTO {
+  caution: import("../ai/types").HousingExtraction["caution"];
   id: string; title: string; photoUrls: string[]; monthlyRent: number; currency: string;
   rentBasis: "person" | "home"; leaseType: string; city: string; neighborhood: string; latitude: number; longitude: number;
   availableFrom: string; availableTo: string; furnished: boolean; bedrooms: number; availableRooms: number;
@@ -36,6 +37,7 @@ export function toHomeListing(post: IngestPost, r: IngestedPost): HomeListingDTO
   const unknowns = [...h.missing_fields.map((f) => f.replace(/_/g, " "))];
   if (!h.utilities) unknowns.push("utilities");
   return {
+    caution: r.provider === "muse" ? h.caution ?? null : null,
     id: `post-${post.id}`,
     title: h.title ?? `${LABEL[h.listing_type ?? ""] ?? "Home"}${h.location ? ` in ${h.location}` : ""}`,
     photoUrls: post.imageUrls?.length ? post.imageUrls : ["nest:bedroom"],

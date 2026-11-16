@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import ListingCaution from './ListingCaution';
 import {
   View,
   Image,
@@ -320,6 +321,7 @@ export default function CircularGallery({
                     {r === 0 && " / month"}
                   </Label>
                   <Animated.View style={{ opacity: slots[r].copyOpacity }}>
+                    <ListingCaution key={h.id} listing={h} />
                     <Label
                       style={{
                         fontSize: 14,

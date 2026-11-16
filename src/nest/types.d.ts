@@ -26,6 +26,7 @@ export interface HomeListing {
   title: string;
   photoUrls: string[];
   monthlyRent: number;
+  caution?: { suspicious: boolean; reasons: { reason: string; quote: string }[] } | null;
   currency: string;
   rentBasis: "person" | "home";
   leaseType: string;

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import ListingCaution from './ListingCaution';
 import { imageSource } from "./assets";
 import {
   View,
@@ -348,6 +349,7 @@ export function HomeDetail({
           {money(listing.monthlyRent)} / month
         </Label>
         <Label style={ui.section}>{listing.title}</Label>
+        <ListingCaution key={listing.id} listing={listing} />
         <Label style={[ui.secondary, { fontSize: 16, marginTop: 2 }]}>
           {listing.leaseType} · {dateRange(listing.availableFrom, listing.availableTo)}
         </Label>

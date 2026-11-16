@@ -37,8 +37,8 @@ async function ingestOnce({ reprocess = false, limit = 100, onProgress }: { repr
     .order("created_at"), "read fb_posts");
   // Posts answered by the mock only because Muse failed are NOT done: retry them while Muse is configured.
   const museOn = getAI().provider === "muse";
-  const seen = new Set<string>(check(await db.from("nest_ingested_posts").select("post_id,provider"), "read ingested")
-    .filter((r: any) => !museOn || r.provider === "muse").map((r: any) => r.post_id));
+  const seen = new Set<string>(check(await db.from("nest_ingested_posts").select("post_id,provider,analysis"), "read ingested")
+    .filter((r: any) => !museOn || (r.provider === "muse" && (!r.analysis?.housing || r.analysis.housing.caution != null))).map((r: any) => r.post_id));
   const posts: IngestPost[] = rows.map((p) => ({
     id: p.id, authorId: p.author_id, authorName: p.author?.name, authorAvatar: p.author?.avatar_url,
     communityId: p.group?.id ?? undefined, communityName: p.group?.name ?? undefined, content: [p.title, p.body].filter(Boolean).join("\n"),
@@ -53,7 +53,8 @@ async function ingestOnce({ reprocess = false, limit = 100, onProgress }: { repr
 
   // Dedupe against listings already stored, not just this batch.
   const prior: any[] = check(await db.from("nest_ingested_posts").select("post_id,analysis,duplicate_of"), "read prior");
-  const known = prior.filter((r) => r.analysis?.housing && !r.duplicate_of && byId.has(r.post_id))
+  const pendingIds = new Set(todo.map((p) => p.id));
+  const known = prior.filter((r) => !pendingIds.has(r.post_id) && r.analysis?.housing && !r.duplicate_of && byId.has(r.post_id))
     .map((r) => ({ rawPostId: r.post_id, housing: r.analysis.housing, text: byId.get(r.post_id)!.content, authorId: byId.get(r.post_id)!.authorId }));
 
   const total = { new: todo.length, analyzed: 0, failed: 0, duplicates: 0, listings: 0, roommates: 0, needsReview: 0 };

@@ -17,6 +17,7 @@ export interface RawPostInput {
 
 /** Every field is nullable: missing info stays null, never guessed. */
 export interface HousingExtraction {
+  caution?: { suspicious: boolean; reasons: { reason: string; quote: string }[] } | null;
   title: string | null;
   rent: number | null;            // monthly, USD
   rent_basis: "person" | "home" | null; // is rent per person/room, or for the whole unit

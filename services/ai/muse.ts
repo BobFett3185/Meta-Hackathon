@@ -75,7 +75,7 @@ export class MuseAI implements AIService {
         response_format: { type: "json_schema", json_schema: { name: "PostAnalysis", schema: ANALYSIS_SCHEMA } },
         reasoning_effort: "minimal",
       });
-      return validateAnalysis(JSON.parse(content));
+      return validateAnalysis(JSON.parse(content), post.content);
     };
     // Pass 1: text only (fast). Most posts are fully understood from their text.
     const first = await run([]);

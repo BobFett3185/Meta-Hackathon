@@ -53,16 +53,23 @@ function item(i: any): ItemExtraction | null {
 }
 
 /** Throws if the AI output is unusable; otherwise returns a clean, normalized PostAnalysis. */
-export function validateAnalysis(raw: unknown): PostAnalysis {
+export function validateAnalysis(raw: unknown, sourceText?: string): PostAnalysis {
   const r = raw as any;
   if (!r || typeof r !== "object") throw new Error("AI output is not an object");
   if (!(POST_CATEGORIES as readonly string[]).includes(r.category)) throw new Error(`Invalid category: ${r.category}`);
   const isHousing = ["housing_listing", "lease_takeover", "roommate_request"].includes(r.category);
   const isItem = ["furniture_sale", "free_item"].includes(r.category);
+  const h = isHousing ? housing(r.housing) : null;
+  if (h && sourceText !== undefined && typeof r.housing?.caution?.suspicious === "boolean" && Array.isArray(r.housing.caution.reasons)) {
+    const reasons = r.housing.caution.reasons.filter((x: any) =>
+      typeof x?.reason === "string" && x.reason.trim() && typeof x.quote === "string" && x.quote.trim().length >= 8 && sourceText.includes(x.quote)
+    ).slice(0, 3).map((x: any) => ({ reason: x.reason.trim().slice(0, 240), quote: x.quote.slice(0, 500) }));
+    h.caution = { suspicious: r.housing.caution.suspicious && reasons.length > 0, reasons: r.housing.caution.suspicious ? reasons : [] };
+  }
   return {
     category: r.category,
     confidence: typeof r.confidence === "number" ? Math.min(1, Math.max(0, r.confidence)) : 0.5,
-    housing: isHousing ? housing(r.housing) : null,
+    housing: h,
     item: isItem ? item(r.item) : null,
     summary: str(r.summary) ?? "",
   };

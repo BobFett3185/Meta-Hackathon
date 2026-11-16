@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import ListingCaution from './ListingCaution';
 import {
   View,
   ScrollView,
@@ -514,6 +515,7 @@ function NestScreen({ onExit }) {
                   >
                     {selected.listing.title}
                   </Label>
+                  <ListingCaution key={selected.listing.id} listing={selected.listing} />
                   <Label
                     style={{
                       fontSize: 12,
